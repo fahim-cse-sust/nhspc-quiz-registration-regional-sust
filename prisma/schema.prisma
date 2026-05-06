@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+model User {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(ADMIN)
+  students  Student[] @relation("RegisteredStudents")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Room {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  name           String    @unique
+  capacity       Int
+  allocatedSeats Int       @default(0)
+  students       Student[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Student {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String
+  institution            String
+  className              String
+  birthCertificateNumber String    @unique
+  email                  String    @unique
+  phone                  String    @unique
+  note                   String?
+  quizMark               Int?
+  quizMarkUpdatedAt      DateTime?
+  quizMarkUpdatedBy      String?
+  roomId                 String    @db.ObjectId
+  registeredById         String    @db.ObjectId
+  room                   Room      @relation(fields: [roomId], references: [id])
+  registeredBy           User      @relation("RegisteredStudents", fields: [registeredById], references: [id])
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([roomId])
+  @@index([registeredById])
+  @@index([name])
+  @@index([institution])
+  @@index([quizMark])
+}
+
+model QuizConfig {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  key           String   @unique
+  totalMarks    Int      @default(50)
+  updatedByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
