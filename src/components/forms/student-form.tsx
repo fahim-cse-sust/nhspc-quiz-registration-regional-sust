@@ -3,6 +3,7 @@
 import { useMemo, useState, useActionState } from "react";
 import { createStudentAction, updateStudentAction } from "@/actions/students";
 import type { ActionState } from "@/actions/auth";
+import type { RoomAllocationOption } from "@/lib/rooms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,14 +12,6 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 const initialState: ActionState = {};
-
-type RoomOption = {
-  id: string;
-  name: string;
-  capacity: number;
-  allocatedSeats: number;
-  availableSeats: number;
-};
 
 type StudentFormData = {
   id: string;
@@ -38,23 +31,32 @@ export function StudentForm({
   student
 }: {
   mode: "create" | "edit";
-  rooms: RoomOption[];
+  rooms: RoomAllocationOption[];
   student?: StudentFormData;
 }) {
   const action = mode === "create" ? createStudentAction : updateStudentAction;
   const [state, formAction, pending] = useActionState(action, initialState);
-  const [selectedRoomId, setSelectedRoomId] = useState(student?.roomId || rooms[0]?.id || "");
+  const firstSelectableRoomId = rooms.find((room) => room.isSelectable)?.id || "";
+  const [selectedRoomId, setSelectedRoomId] = useState(student?.roomId || firstSelectableRoomId);
 
   const selectedRoom = useMemo(
     () => rooms.find((room) => room.id === selectedRoomId),
     [rooms, selectedRoomId]
   );
 
+  const hasSelectableRoom = rooms.some((room) => room.isSelectable);
+
   return (
     <form action={formAction} className="space-y-6">
       {state.error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
           {state.error}
+        </div>
+      ) : null}
+
+      {!hasSelectableRoom ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+          No room is currently selectable. Ask Super Admin to open a room or check the room capacity.
         </div>
       ) : null}
 
@@ -97,21 +99,29 @@ export function StudentForm({
           <Select id="roomId" name="roomId" value={selectedRoomId} onChange={(event) => setSelectedRoomId(event.target.value)} required>
             <option value="" disabled>Select a room</option>
             {rooms.map((room) => (
-              <option key={room.id} value={room.id} disabled={mode === "create" && room.availableSeats <= 0}>
-                {room.name} — {room.availableSeats} seat(s) available
+              <option key={room.id} value={room.id} disabled={!room.isSelectable}>
+                P{room.priority} — {room.name} — {room.availableSeats} seat(s) — {room.statusLabel}
               </option>
             ))}
           </Select>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            Locked rooms cannot be selected until the lower-priority room is full, unless Super Admin opens them manually.
+          </p>
         </Field>
 
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)] p-4">
           <p className="text-sm font-semibold">Room availability</p>
           {selectedRoom ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge>{selectedRoom.name}</Badge>
-              <Badge>Total: {selectedRoom.capacity}</Badge>
-              <Badge>Allocated: {selectedRoom.allocatedSeats}</Badge>
-              <Badge>Available: {selectedRoom.availableSeats}</Badge>
+            <div className="mt-3 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge>{selectedRoom.name}</Badge>
+                <Badge>Priority: {selectedRoom.priority}</Badge>
+                <Badge>Total: {selectedRoom.capacity}</Badge>
+                <Badge>Allocated: {selectedRoom.allocatedSeats}</Badge>
+                <Badge>Available: {selectedRoom.availableSeats}</Badge>
+                <Badge>{selectedRoom.statusLabel}</Badge>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">{selectedRoom.lockReason}</p>
             </div>
           ) : (
             <p className="mt-2 text-sm text-[var(--muted-foreground)]">Select a room to see available seats.</p>
@@ -123,7 +133,7 @@ export function StudentForm({
         <Textarea id="note" name="note" defaultValue={student?.note || ""} placeholder="Any optional note" />
       </Field>
 
-      <Button type="submit" disabled={pending || rooms.length === 0}>
+      <Button type="submit" disabled={pending || !hasSelectableRoom}>
         {pending ? "Saving..." : mode === "create" ? "Register Student" : "Update Student"}
       </Button>
     </form>

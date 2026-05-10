@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { buildRoomAllocationOptions } from "@/lib/rooms";
 import { studentSchema } from "@/lib/validation";
 import { normaliseEmail, normalisePhone } from "@/lib/utils";
 import type { ActionState } from "@/actions/auth";
@@ -20,20 +21,34 @@ function friendlyUniqueError(error: unknown) {
   return null;
 }
 
-async function reserveRoomSeat(roomId: string) {
-  const room = await prisma.room.findUnique({
-    where: { id: roomId },
-    select: { id: true, capacity: true, allocatedSeats: true }
+async function reserveRoomSeat(roomId: string, currentRoomId?: string) {
+  const rooms = await prisma.room.findMany({
+    select: {
+      id: true,
+      name: true,
+      capacity: true,
+      priority: true,
+      allocatedSeats: true,
+      isManuallyOpen: true,
+      isManuallyClosed: true
+    }
   });
 
-  if (!room) {
+  const roomOptions = buildRoomAllocationOptions(rooms, currentRoomId);
+  const selectedRoom = roomOptions.find((room) => room.id === roomId);
+
+  if (!selectedRoom) {
     throw new Error("Selected room was not found.");
+  }
+
+  if (!selectedRoom.isSelectable) {
+    throw new Error(`${selectedRoom.name} is not selectable. ${selectedRoom.lockReason}`);
   }
 
   const result = await prisma.room.updateMany({
     where: {
       id: roomId,
-      allocatedSeats: { lt: room.capacity }
+      allocatedSeats: { lt: selectedRoom.capacity }
     },
     data: {
       allocatedSeats: { increment: 1 }
@@ -112,6 +127,7 @@ export async function createStudentAction(_prevState: ActionState, formData: For
   revalidatePath("/students");
   revalidatePath("/dashboard");
   revalidatePath("/rooms");
+  revalidatePath("/rooms/control");
   redirect("/students");
 }
 
@@ -151,7 +167,7 @@ export async function updateStudentAction(_prevState: ActionState, formData: For
     oldRoomId = currentStudent.roomId;
 
     if (currentStudent.roomId !== data.roomId) {
-      await reserveRoomSeat(data.roomId);
+      await reserveRoomSeat(data.roomId, currentStudent.roomId);
       newSeatReserved = true;
     }
 
@@ -183,6 +199,7 @@ export async function updateStudentAction(_prevState: ActionState, formData: For
   revalidatePath("/students");
   revalidatePath("/dashboard");
   revalidatePath("/rooms");
+  revalidatePath("/rooms/control");
   redirect("/students");
 }
 
@@ -200,5 +217,6 @@ export async function deleteStudentAction(formData: FormData) {
   revalidatePath("/students");
   revalidatePath("/dashboard");
   revalidatePath("/rooms");
+  revalidatePath("/rooms/control");
   redirect("/students");
 }

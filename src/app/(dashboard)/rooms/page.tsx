@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, SlidersHorizontal } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
+import { buildRoomAllocationOptions, roomManualStatusLabel } from "@/lib/rooms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { DeleteButton } from "@/components/forms/delete-button";
 import { deleteRoomAction } from "@/actions/rooms";
@@ -14,20 +14,25 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
   const params = await searchParams;
 
   const rooms = await prisma.room.findMany({
-    orderBy: { name: "asc" }
+    orderBy: [{ priority: "asc" }, { name: "asc" }]
   });
+
+  const roomOptions = buildRoomAllocationOptions(rooms);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight">Rooms</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">Create rooms and manage highest seat capacity.</p>
+          <p className="text-sm text-[var(--muted-foreground)]">Create rooms, set priority and manage highest seat capacity.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <a href="/api/rooms/export" className="inline-flex h-10 items-center justify-center rounded-xl border border-[var(--border)] px-4 text-sm font-semibold hover:bg-[var(--muted)]">
             Export Summary CSV
           </a>
+          <Link href="/rooms/control" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold hover:bg-[var(--muted)]">
+            <SlidersHorizontal className="h-4 w-4" /> Open / Close Rooms
+          </Link>
           <Link href="/rooms/new" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-sm font-semibold text-[var(--primary-foreground)] hover:opacity-90">
             <Plus className="h-4 w-4" /> Add Room
           </Link>
@@ -43,47 +48,49 @@ export default async function RoomsPage({ searchParams }: { searchParams: Promis
       <Card>
         <CardHeader>
           <CardTitle>Room List</CardTitle>
-          <CardDescription>Room-wise student count and available seats.</CardDescription>
+          <CardDescription>Priority-wise room status, student count and available seats.</CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto p-0">
-          {rooms.length === 0 ? (
+          {roomOptions.length === 0 ? (
             <p className="p-5 text-sm text-[var(--muted-foreground)]">No rooms created yet.</p>
           ) : (
             <Table>
               <THead>
                 <TR>
+                  <TH>Priority</TH>
                   <TH>Room</TH>
                   <TH>Capacity</TH>
                   <TH>Allocated</TH>
                   <TH>Available</TH>
+                  <TH>Status</TH>
+                  <TH>Manual Control</TH>
                   <TH className="text-right">Actions</TH>
                 </TR>
               </THead>
               <TBody>
-                {rooms.map((room) => {
-                  const allocated = room.allocatedSeats;
-                  const available = room.capacity - allocated;
-                  return (
-                    <TR key={room.id}>
-                      <TD className="font-semibold">{room.name}</TD>
-                      <TD>{room.capacity}</TD>
-                      <TD>{allocated}</TD>
-                      <TD><Badge>{available}</Badge></TD>
-                      <TD>
-                        <div className="flex justify-end gap-2">
-                          <Link href={`/rooms/${room.id}/edit`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
-                            Edit
-                          </Link>
-                          <DeleteButton
-                            id={room.id}
-                            action={deleteRoomAction}
-                            message="Delete this room? You can only delete rooms with no assigned students."
-                          />
-                        </div>
-                      </TD>
-                    </TR>
-                  );
-                })}
+                {roomOptions.map((room) => (
+                  <TR key={room.id}>
+                    <TD className="font-semibold">{room.priority}</TD>
+                    <TD className="font-semibold">{room.name}</TD>
+                    <TD>{room.capacity}</TD>
+                    <TD>{room.allocatedSeats}</TD>
+                    <TD><Badge>{room.availableSeats}</Badge></TD>
+                    <TD><Badge>{room.statusLabel}</Badge></TD>
+                    <TD>{roomManualStatusLabel(room)}</TD>
+                    <TD>
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/rooms/${room.id}/edit`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                          Edit
+                        </Link>
+                        <DeleteButton
+                          id={room.id}
+                          action={deleteRoomAction}
+                          message="Delete this room? You can only delete rooms with no assigned students."
+                        />
+                      </div>
+                    </TD>
+                  </TR>
+                ))}
               </TBody>
             </Table>
           )}

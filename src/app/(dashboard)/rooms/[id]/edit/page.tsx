@@ -17,7 +17,7 @@ export default async function EditRoomPage({ params }: { params: Promise<{ id: s
       <Card>
         <CardHeader>
           <CardTitle>Edit Room</CardTitle>
-          <CardDescription>Update room name or capacity.</CardDescription>
+          <CardDescription>Update room name, capacity or priority number.</CardDescription>
         </CardHeader>
         <CardContent>
           <RoomForm mode="edit" room={room} />

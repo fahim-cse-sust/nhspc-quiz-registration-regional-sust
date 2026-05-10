@@ -42,9 +42,14 @@ export function MobileNav({ role }: { role: Role }) {
             Quiz Marks
           </Link>
           {role === "SUPER_ADMIN" ? (
-            <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/rooms">
-              Rooms
-            </Link>
+            <>
+              <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/rooms">
+                Rooms
+              </Link>
+              <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/rooms/control">
+                Room Control
+              </Link>
+            </>
           ) : null}
         </nav>
       ) : null}

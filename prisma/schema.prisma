@@ -24,13 +24,18 @@ model User {
 }
 
 model Room {
-  id             String    @id @default(auto()) @map("_id") @db.ObjectId
-  name           String    @unique
-  capacity       Int
-  allocatedSeats Int       @default(0)
-  students       Student[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  id               String    @id @default(auto()) @map("_id") @db.ObjectId
+  name             String    @unique
+  capacity         Int
+  priority         Int       @default(1)
+  allocatedSeats   Int       @default(0)
+  isManuallyOpen   Boolean   @default(false)
+  isManuallyClosed Boolean   @default(false)
+  students         Student[]
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([priority])
 }
 
 model Student {

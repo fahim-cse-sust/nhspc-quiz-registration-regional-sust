@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   const [studentCount, roomCount, rooms, recentStudents, markedStudents, rankList, quizConfig] = await Promise.all([
     prisma.student.count(),
     prisma.room.count(),
-    prisma.room.findMany({ orderBy: { name: "asc" } }),
+    prisma.room.findMany({ orderBy: [{ priority: "asc" }, { name: "asc" }] }),
     prisma.student.findMany({
       take: 6,
       orderBy: { createdAt: "desc" },
@@ -132,10 +132,10 @@ export default async function DashboardPage() {
                 <div key={room.id} className="rounded-2xl border border-[var(--border)] p-4 transition hover:-translate-y-0.5 hover:bg-[var(--muted)]/50">
                   <div className="flex items-center justify-between gap-3">
                     <p className="font-bold">{room.name}</p>
-                    <Badge>{available} available</Badge>
+                    <Badge>P{room.priority} · {available} available</Badge>
                   </div>
                   <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                    {used} allocated out of {room.capacity}
+                    Priority {room.priority} · {used} allocated out of {room.capacity}
                   </p>
                 </div>
               );

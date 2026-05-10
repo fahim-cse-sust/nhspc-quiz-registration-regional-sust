@@ -4,6 +4,7 @@ import { StudentForm } from "@/components/forms/student-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { buildRoomAllocationOptions } from "@/lib/rooms";
 
 export default async function EditStudentPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
@@ -12,23 +13,13 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
   const [student, rooms] = await Promise.all([
     prisma.student.findUnique({ where: { id } }),
     prisma.room.findMany({
-      orderBy: { name: "asc" }
+      orderBy: [{ priority: "asc" }, { name: "asc" }]
     })
   ]);
 
   if (!student) notFound();
 
-  const roomOptions = rooms.map((room) => {
-    const allocated = room.allocatedSeats;
-    const extraSeatForCurrentRoom = room.id === student.roomId ? 1 : 0;
-    return {
-      id: room.id,
-      name: room.name,
-      capacity: room.capacity,
-      allocatedSeats: allocated,
-      availableSeats: Math.max(room.capacity - allocated + extraSeatForCurrentRoom, 0)
-    };
-  });
+  const roomOptions = buildRoomAllocationOptions(rooms, student.roomId);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -36,7 +27,7 @@ export default async function EditStudentPage({ params }: { params: Promise<{ id
       <Card>
         <CardHeader>
           <CardTitle>Edit Student</CardTitle>
-          <CardDescription>Update student information or change allocated room if seats are available.</CardDescription>
+          <CardDescription>Update student information or change allocated room if the priority rule allows it.</CardDescription>
         </CardHeader>
         <CardContent>
           <StudentForm mode="edit" rooms={roomOptions} student={student} />

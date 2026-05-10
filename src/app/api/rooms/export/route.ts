@@ -3,6 +3,7 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { toCsv } from "@/lib/csv";
+import { buildRoomAllocationOptions, roomManualStatusLabel } from "@/lib/rooms";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -11,12 +12,22 @@ export async function GET() {
   }
 
   const rooms = await prisma.room.findMany({
-    orderBy: { name: "asc" }
+    orderBy: [{ priority: "asc" }, { name: "asc" }]
   });
 
+  const roomOptions = buildRoomAllocationOptions(rooms);
+
   const rows = [
-    ["Room Name", "Capacity", "Allocated Students", "Available Seats"],
-    ...rooms.map((room) => [room.name, room.capacity, room.allocatedSeats, room.capacity - room.allocatedSeats])
+    ["Priority", "Room Name", "Capacity", "Allocated Students", "Available Seats", "Current Status", "Manual Status"],
+    ...roomOptions.map((room) => [
+      room.priority,
+      room.name,
+      room.capacity,
+      room.allocatedSeats,
+      room.availableSeats,
+      room.statusLabel,
+      roomManualStatusLabel(room)
+    ])
   ];
 
   return new NextResponse(toCsv(rows), {

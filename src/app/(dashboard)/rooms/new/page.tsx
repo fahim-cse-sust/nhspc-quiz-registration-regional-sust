@@ -12,7 +12,7 @@ export default async function NewRoomPage() {
       <Card>
         <CardHeader>
           <CardTitle>Add Room</CardTitle>
-          <CardDescription>Enter room name and highest capacity.</CardDescription>
+          <CardDescription>Enter room name, highest capacity and priority number.</CardDescription>
         </CardHeader>
         <CardContent>
           <RoomForm mode="create" />

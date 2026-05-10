@@ -14,7 +14,7 @@ export function RoomForm({
   room
 }: {
   mode: "create" | "edit";
-  room?: { id: string; name: string; capacity: number };
+  room?: { id: string; name: string; capacity: number; priority: number };
 }) {
   const action = mode === "create" ? createRoomAction : updateRoomAction;
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -37,6 +37,14 @@ export function RoomForm({
       <div>
         <Label htmlFor="capacity">Highest capacity</Label>
         <Input id="capacity" name="capacity" type="number" min="1" defaultValue={room?.capacity} placeholder="Example: 40" required />
+      </div>
+
+      <div>
+        <Label htmlFor="priority">Priority number</Label>
+        <Input id="priority" name="priority" type="number" min="1" defaultValue={room?.priority ?? 1} placeholder="Example: 1" required />
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          Lower priority opens first. Priority 1 must be full before priority 2 opens automatically.
+        </p>
       </div>
 
       <Button type="submit" disabled={pending}>

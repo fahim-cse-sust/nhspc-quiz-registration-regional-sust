@@ -3,21 +3,16 @@ import { StudentForm } from "@/components/forms/student-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { buildRoomAllocationOptions } from "@/lib/rooms";
 
 export default async function NewStudentPage() {
   await requireUser();
 
   const rooms = await prisma.room.findMany({
-    orderBy: { name: "asc" }
+    orderBy: [{ priority: "asc" }, { name: "asc" }]
   });
 
-  const roomOptions = rooms.map((room) => ({
-    id: room.id,
-    name: room.name,
-    capacity: room.capacity,
-    allocatedSeats: room.allocatedSeats,
-    availableSeats: Math.max(room.capacity - room.allocatedSeats, 0)
-  }));
+  const roomOptions = buildRoomAllocationOptions(rooms);
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -25,7 +20,7 @@ export default async function NewStudentPage() {
       <Card>
         <CardHeader>
           <CardTitle>Register Student</CardTitle>
-          <CardDescription>Enter student details and select an available room.</CardDescription>
+          <CardDescription>Enter student details and select the currently open priority room.</CardDescription>
         </CardHeader>
         <CardContent>
           {roomOptions.length === 0 ? (

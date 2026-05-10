@@ -16,7 +16,8 @@ export const signupSchema = z.object({
 export const roomSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(1, "Room name is required."),
-  capacity: z.coerce.number().int().positive("Capacity must be greater than 0.")
+  capacity: z.coerce.number().int().positive("Capacity must be greater than 0."),
+  priority: z.coerce.number().int().positive("Priority must be greater than 0.")
 });
 
 export const studentSchema = z.object({

@@ -47,7 +47,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       orderBy: { createdAt: "desc" },
       include: { room: true, registeredBy: { select: { name: true } } }
     }),
-    prisma.room.findMany({ orderBy: { name: "asc" } })
+    prisma.room.findMany({ orderBy: [{ priority: "asc" }, { name: "asc" }] })
   ]);
 
   const csvUrl = `/api/students/export${room ? `?roomId=${room}` : ""}`;

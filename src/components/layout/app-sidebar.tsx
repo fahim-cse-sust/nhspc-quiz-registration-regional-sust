@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BookOpenCheck, DoorOpen, LayoutDashboard, Trophy, Users } from "lucide-react";
+import { BookOpenCheck, DoorOpen, LayoutDashboard, SlidersHorizontal, Trophy, Users } from "lucide-react";
 import type { Role } from "@prisma/client";
 import { logoutAction } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,10 @@ export function AppSidebar({ user }: { user: { name: string; email: string; role
         <SidebarLink href="/students" icon={<Users className="h-4 w-4" />} label="Students" />
         <SidebarLink href="/quiz" icon={<Trophy className="h-4 w-4" />} label="Quiz Marks" />
         {user.role === "SUPER_ADMIN" ? (
-          <SidebarLink href="/rooms" icon={<DoorOpen className="h-4 w-4" />} label="Rooms" />
+          <>
+            <SidebarLink href="/rooms" icon={<DoorOpen className="h-4 w-4" />} label="Rooms" />
+            <SidebarLink href="/rooms/control" icon={<SlidersHorizontal className="h-4 w-4" />} label="Room Control" />
+          </>
         ) : null}
       </nav>
 
