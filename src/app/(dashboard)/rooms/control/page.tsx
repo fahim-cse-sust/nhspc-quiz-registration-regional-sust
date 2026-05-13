@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import { buildRoomAllocationOptions, roomManualStatusLabel } from "@/lib/rooms";
+import { buildRoomAllocationOptions, getRoomStatisticsMap, roomManualStatusLabel } from "@/lib/rooms";
 import { updateRoomManualStatusAction } from "@/actions/rooms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ export default async function RoomControlPage() {
     orderBy: [{ priority: "asc" }, { name: "asc" }]
   });
 
-  const roomOptions = buildRoomAllocationOptions(rooms);
+  const statsMap = await getRoomStatisticsMap(rooms.map((room) => room.id));
+  const roomOptions = buildRoomAllocationOptions(
+    rooms.map((room) => ({ ...room, allocatedSeats: statsMap.get(room.id)?.totalRegisteredInRoom ?? room.allocatedSeats }))
+  );
 
   return (
     <div className="space-y-6">
@@ -48,28 +51,35 @@ export default async function RoomControlPage() {
                   <TH>Priority</TH>
                   <TH>Room</TH>
                   <TH>Seats</TH>
+                  <TH>Higher Secondary</TH>
+                  <TH>Junior</TH>
                   <TH>Current Status</TH>
                   <TH>Manual Status</TH>
                   <TH className="text-right">Control</TH>
                 </TR>
               </THead>
               <TBody>
-                {roomOptions.map((room) => (
-                  <TR key={room.id}>
-                    <TD className="font-semibold">{room.priority}</TD>
-                    <TD className="font-semibold">{room.name}</TD>
-                    <TD>{room.allocatedSeats}/{room.capacity} allocated, {room.availableSeats} available</TD>
-                    <TD><Badge>{room.statusLabel}</Badge></TD>
-                    <TD>{roomManualStatusLabel(room)}</TD>
-                    <TD>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <RoomStatusButton id={room.id} status="auto" label="Automatic" disabled={!room.isManuallyOpen && !room.isManuallyClosed} />
-                        <RoomStatusButton id={room.id} status="open" label="Open" disabled={room.isManuallyOpen} />
-                        <RoomStatusButton id={room.id} status="closed" label="Close" disabled={room.isManuallyClosed} danger />
-                      </div>
-                    </TD>
-                  </TR>
-                ))}
+                {roomOptions.map((room) => {
+                  const stats = statsMap.get(room.id);
+                  return (
+                    <TR key={room.id}>
+                      <TD className="font-semibold">{room.priority}</TD>
+                      <TD className="font-semibold">{room.name}</TD>
+                      <TD>{stats?.totalRegisteredInRoom ?? 0}/{room.capacity} registered, {room.availableSeats} available</TD>
+                      <TD>{stats?.higherSecondaryCount ?? 0}/{stats?.halfCapacity ?? Math.floor(room.capacity / 2)}</TD>
+                      <TD>{stats?.juniorCount ?? 0}/{stats?.halfCapacity ?? Math.floor(room.capacity / 2)}</TD>
+                      <TD><Badge>{room.statusLabel}</Badge></TD>
+                      <TD>{roomManualStatusLabel(room)}</TD>
+                      <TD>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <RoomStatusButton id={room.id} status="auto" label="Automatic" disabled={!room.isManuallyOpen && !room.isManuallyClosed} />
+                          <RoomStatusButton id={room.id} status="open" label="Open" disabled={room.isManuallyOpen} />
+                          <RoomStatusButton id={room.id} status="closed" label="Close" disabled={room.isManuallyClosed} danger />
+                        </div>
+                      </TD>
+                    </TR>
+                  );
+                })}
               </TBody>
             </Table>
           )}

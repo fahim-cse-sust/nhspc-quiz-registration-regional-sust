@@ -32,27 +32,27 @@ export function MobileNav({ role }: { role: Role }) {
 
       {open ? (
         <nav className="mt-4 grid gap-2">
-          <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/dashboard">
-            Dashboard
-          </Link>
-          <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/students">
-            Students
-          </Link>
-          <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/quiz">
-            Quiz Marks
-          </Link>
+          <MobileLink href="/dashboard" label="Dashboard" />
+          <MobileLink href="/students" label="Students" />
+          <MobileLink href="/students/new" label="Register Student" />
+          <MobileLink href="/quiz" label="Quiz Marks" />
           {role === "SUPER_ADMIN" ? (
             <>
-              <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/rooms">
-                Rooms
-              </Link>
-              <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href="/rooms/control">
-                Room Control
-              </Link>
+              <MobileLink href="/students/import" label="Import Students" />
+              <MobileLink href="/rooms" label="Rooms" />
+              <MobileLink href="/rooms/control" label="Room Control" />
             </>
           ) : null}
         </nav>
       ) : null}
     </div>
+  );
+}
+
+function MobileLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link className="rounded-xl bg-[var(--muted)] px-3 py-2 text-sm font-semibold" href={href}>
+      {label}
+    </Link>
   );
 }

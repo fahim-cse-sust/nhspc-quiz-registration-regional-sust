@@ -25,6 +25,7 @@
     "react-dom": "latest",
     "sonner": "latest",
     "tailwind-merge": "latest",
+    "xlsx": "^0.18.5",
     "zod": "latest"
   },
   "devDependencies": {

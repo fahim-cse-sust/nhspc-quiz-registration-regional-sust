@@ -12,6 +12,7 @@ function revalidateRoomPages() {
   revalidatePath("/rooms");
   revalidatePath("/rooms/control");
   revalidatePath("/students/new");
+  revalidatePath("/students/import");
   revalidatePath("/dashboard");
 }
 
@@ -75,16 +76,18 @@ export async function updateRoomAction(_prevState: ActionState, formData: FormDa
 
   const existingRoom = await prisma.room.findUnique({
     where: { id: parsed.data.id },
-    select: { allocatedSeats: true }
+    select: { id: true }
   });
 
   if (!existingRoom) {
     return { error: "Room was not found." };
   }
 
-  if (parsed.data.capacity < existingRoom.allocatedSeats) {
+  const registeredInRoom = await prisma.student.count({ where: { roomId: parsed.data.id, isRegistered: true } });
+
+  if (parsed.data.capacity < registeredInRoom) {
     return {
-      error: `Capacity cannot be less than the current allocated students (${existingRoom.allocatedSeats}).`
+      error: `Capacity cannot be less than the current registered students (${registeredInRoom}).`
     };
   }
 
@@ -149,7 +152,7 @@ export async function deleteRoomAction(formData: FormData) {
   const id = String(formData.get("id") || "");
   if (!id) return;
 
-  const assignedStudents = await prisma.student.count({ where: { roomId: id } });
+  const assignedStudents = await prisma.student.count({ where: { roomId: id, isRegistered: true } });
   if (assignedStudents > 0) {
     redirect("/rooms?error=Cannot delete a room that already has students assigned.");
   }

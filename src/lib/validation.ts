@@ -20,23 +20,36 @@ export const roomSchema = z.object({
   priority: z.coerce.number().int().positive("Priority must be greater than 0.")
 });
 
-export const studentSchema = z.object({
+export const uploadedStudentSchema = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(2, "Student name is required."),
-  institution: z.string().trim().min(2, "Institution name is required."),
-  className: z.string().trim().min(1, "Class is required."),
-  birthCertificateNumber: z
-    .string()
-    .trim()
-    .min(8, "Birth certificate number is too short.")
-    .max(30, "Birth certificate number is too long."),
-  email: z.string().trim().email("Enter a valid student email."),
-  phone: z
-    .string()
-    .trim()
-    .regex(bdPhoneRegex, "Enter a valid Bangladesh phone number, for example 01XXXXXXXXX."),
-  roomId: z.string().min(1, "Please select a room."),
+  mobile: z.string().trim().min(6, "Mobile number is required.").max(30, "Mobile number is too long."),
+  contest: z.string().trim().min(1, "Contest is required."),
+  category: z.string().trim().min(1, "Category is required."),
+  venue: z.string().trim().min(1, "Venue is required."),
+  instituteNameEn: z.string().trim().min(1, "Institute Name (EN) is required."),
+  nameEn: z.string().trim().optional(),
+  upazila: z.string().trim().optional(),
+  division: z.string().trim().optional(),
+  district: z.string().trim().optional(),
+  serialNumber: z.string().trim().min(1, "Serial Number is required."),
+  email: z.preprocess(
+    (value) => {
+      const text = String(value ?? "").trim();
+      return text === "" ? undefined : text;
+    },
+    z.string().email("Enter a valid email address.").optional()
+  ),
   note: z.string().trim().optional()
+});
+
+export const registerUploadedStudentSchema = z.object({
+  studentId: z.string().min(1, "Student ID is missing."),
+  roomId: z.string().min(1, "Please select a room.")
+});
+
+// Kept for any legacy imports; new student records use uploadedStudentSchema.
+export const studentSchema = uploadedStudentSchema.extend({
+  roomId: z.string().optional()
 });
 
 export const quizTotalMarksSchema = z.object({
@@ -55,6 +68,8 @@ export const quizMarkSchema = z.object({
 });
 
 export type StudentInput = z.infer<typeof studentSchema>;
+export type UploadedStudentInput = z.infer<typeof uploadedStudentSchema>;
+export type RegisterUploadedStudentInput = z.infer<typeof registerUploadedStudentSchema>;
 export type RoomInput = z.infer<typeof roomSchema>;
 export type QuizTotalMarksInput = z.infer<typeof quizTotalMarksSchema>;
 export type QuizMarkInput = z.infer<typeof quizMarkSchema>;

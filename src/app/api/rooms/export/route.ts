@@ -3,7 +3,7 @@ import { Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth";
 import { toCsv } from "@/lib/csv";
-import { buildRoomAllocationOptions, roomManualStatusLabel } from "@/lib/rooms";
+import { buildRoomAllocationOptions, getRoomStatisticsMap, roomManualStatusLabel } from "@/lib/rooms";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -15,19 +15,39 @@ export async function GET() {
     orderBy: [{ priority: "asc" }, { name: "asc" }]
   });
 
-  const roomOptions = buildRoomAllocationOptions(rooms);
+  const statsMap = await getRoomStatisticsMap(rooms.map((room) => room.id));
+  const roomOptions = buildRoomAllocationOptions(
+    rooms.map((room) => ({ ...room, allocatedSeats: statsMap.get(room.id)?.totalRegisteredInRoom ?? room.allocatedSeats }))
+  );
 
   const rows = [
-    ["Priority", "Room Name", "Capacity", "Allocated Students", "Available Seats", "Current Status", "Manual Status"],
-    ...roomOptions.map((room) => [
-      room.priority,
-      room.name,
-      room.capacity,
-      room.allocatedSeats,
-      room.availableSeats,
-      room.statusLabel,
-      roomManualStatusLabel(room)
-    ])
+    [
+      "Priority",
+      "Room Name",
+      "Capacity",
+      "Registered Students",
+      "Higher Secondary Count",
+      "Junior Count",
+      "Half Capacity",
+      "Available Seats",
+      "Current Status",
+      "Manual Status"
+    ],
+    ...roomOptions.map((room) => {
+      const stats = statsMap.get(room.id);
+      return [
+        room.priority,
+        room.name,
+        room.capacity,
+        stats?.totalRegisteredInRoom ?? 0,
+        stats?.higherSecondaryCount ?? 0,
+        stats?.juniorCount ?? 0,
+        stats?.halfCapacity ?? Math.floor(room.capacity / 2),
+        room.availableSeats,
+        room.statusLabel,
+        roomManualStatusLabel(room)
+      ];
+    })
   ];
 
   return new NextResponse(toCsv(rows), {

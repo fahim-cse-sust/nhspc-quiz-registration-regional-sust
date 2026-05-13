@@ -39,28 +39,44 @@ model Room {
 }
 
 model Student {
-  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
-  name                   String
-  institution            String
-  className              String
-  birthCertificateNumber String    @unique
-  email                  String    @unique
-  phone                  String    @unique
-  note                   String?
-  quizMark               Int?
-  quizMarkUpdatedAt      DateTime?
-  quizMarkUpdatedBy      String?
-  roomId                 String    @db.ObjectId
-  registeredById         String    @db.ObjectId
-  room                   Room      @relation(fields: [roomId], references: [id])
-  registeredBy           User      @relation("RegisteredStudents", fields: [registeredById], references: [id])
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  mobile            String
+  contest           String
+  category          String
+  venue             String
+  instituteNameEn   String
+  nameEn            String?
+  upazila           String?
+  division          String?
+  district          String?
+  serialNumber      String    @unique
+  email             String?
+  note              String?
+  quizMark          Int?
+  quizMarkUpdatedAt DateTime?
+  quizMarkUpdatedBy String?
+  roomId            String?   @db.ObjectId
+  registeredById    String?   @db.ObjectId
+  registeredAt      DateTime?
+  isRegistered      Boolean   @default(false)
+  room              Room?     @relation(fields: [roomId], references: [id])
+  registeredBy      User?     @relation("RegisteredStudents", fields: [registeredById], references: [id])
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
+  // Legacy fields kept optional so older records do not break after the workflow change.
+  name                   String?
+  institution            String?
+  className              String?
+  birthCertificateNumber String?
+  phone                  String?
+
+  @@index([category])
   @@index([roomId])
+  @@index([mobile])
+  @@index([email])
   @@index([registeredById])
-  @@index([name])
-  @@index([institution])
+  @@index([isRegistered])
   @@index([quizMark])
 }
 
