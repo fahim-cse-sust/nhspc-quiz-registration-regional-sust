@@ -135,15 +135,25 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
               <p className="p-5 text-sm text-[var(--muted-foreground)]">No uploaded student found. Super Admin can import students first.</p>
             ) : (
               <div className="overflow-x-auto">
-                <Table className="min-w-[940px]">
+                <Table className="min-w-[1120px] table-fixed">
+                  <colgroup>
+                    <col className="w-[190px]" />
+                    <col className="w-[155px]" />
+                    <col className="w-[300px]" />
+                    <col className="w-[140px]" />
+                    <col className="w-[125px]" />
+                    <col className="w-[130px]" />
+                    <col className="w-[80px]" />
+                  </colgroup>
                   <THead>
                     <TR>
-                      <TH className="w-[18%]">Name (EN)</TH>
-                      <TH className="w-[14%]">Serial Number</TH>
-                      <TH className="w-[27%]">Institute</TH>
-                      <TH className="w-[13%]">Mobile</TH>
-                      <TH className="w-[16%]">Category</TH>
-                      <TH className="no-print w-[12%] min-w-[120px] text-right">Action</TH>
+                      <TH>Name (EN)</TH>
+                      <TH>Serial Number</TH>
+                      <TH>Institute</TH>
+                      <TH>Mobile</TH>
+                      <TH>Category</TH>
+                      <TH>Status</TH>
+                      <TH className="no-print text-right">Action</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -153,17 +163,17 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
                         <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
                         <TD className="break-words">{student.instituteNameEn}</TD>
                         <TD className="break-words font-semibold">{student.mobile}</TD>
+                        <TD className="break-words align-top leading-5">{student.category}</TD>
                         <TD className="align-top">
-                          <div className="flex max-w-[170px] flex-col items-start gap-1">
-                            <span className="break-words leading-5">{student.category}</span>
-                            <Badge className={student.isRegistered ? "max-w-full border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "max-w-full border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
                               {student.isRegistered ? "Registered" : "Pending"}
                             </Badge>
-                            {student.room ? <Badge className="max-w-full whitespace-normal text-left leading-4">{student.room.name}</Badge> : null}
+                            {student.room ? <span className="text-xs font-semibold leading-4 text-[var(--muted-foreground)]">{student.room.name}</span> : null}
                           </div>
                         </TD>
                         <TD className="no-print text-right align-top">
-                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 shrink-0 items-center justify-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
                             {student.isRegistered ? "View" : "Register"}
                           </Link>
                         </TD>
