@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
     prisma.student.findMany({
       where: { isRegistered: true, quizMark: { not: null } },
-      take: 5,
+      take: 40,
       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
       include: { room: true }
     }),
@@ -106,10 +106,10 @@ export default async function DashboardPage() {
 
         <Card className="animate-fade-up animation-delay-200 card-hover">
           <CardHeader>
-            <CardTitle>Live Top Rank Preview</CardTitle>
-            <CardDescription>Top 5 scores from registered students.</CardDescription>
+            <CardTitle>Live Top 40 Rank Preview</CardTitle>
+            <CardDescription>Top 40 scores from registered students, highest marks first.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="max-h-[720px] space-y-3 overflow-y-auto pr-3">
             {rankList.length === 0 ? (
               <p className="text-sm text-[var(--muted-foreground)]">No quiz marks entered yet.</p>
             ) : (

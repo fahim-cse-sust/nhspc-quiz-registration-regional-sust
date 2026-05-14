@@ -148,15 +148,15 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
             <p className="p-5 text-sm text-[var(--muted-foreground)]">No student record found.</p>
           ) : (
             <div className="overflow-x-auto">
-              <Table className="min-w-[820px] table-fixed">
+              <Table className="min-w-[1080px]">
                 <THead>
                   <TR>
-                    <TH className="w-[22%]">Name (EN)</TH>
-                    <TH className="w-[16%]">Serial Number</TH>
-                    <TH className="w-[28%]">Institute</TH>
-                    <TH className="w-[15%]">Mobile</TH>
-                    <TH className="w-[11%]">Category</TH>
-                    <TH className="no-print w-[8%] text-right">Actions</TH>
+                    <TH className="w-[18%]">Name (EN)</TH>
+                    <TH className="w-[14%]">Serial Number</TH>
+                    <TH className="w-[27%]">Institute</TH>
+                    <TH className="w-[13%]">Mobile</TH>
+                    <TH className="w-[14%]">Category</TH>
+                    <TH className="no-print w-[14%] min-w-[220px] text-right">Actions</TH>
                   </TR>
                 </THead>
                 <TBody>
@@ -166,27 +166,27 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
                       <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
                       <TD className="break-words">{student.instituteNameEn}</TD>
                       <TD className="break-words font-semibold">{student.mobile}</TD>
-                      <TD>
-                        <div className="flex flex-col items-start gap-1">
-                          <span className="break-words">{student.category}</span>
-                          <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                      <TD className="align-top">
+                        <div className="flex max-w-[170px] flex-col items-start gap-1">
+                          <span className="break-words leading-5">{student.category}</span>
+                          <Badge className={student.isRegistered ? "max-w-full border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "max-w-full border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
                             {student.isRegistered ? "Registered" : "Pending"}
                           </Badge>
-                          {student.room ? <Badge>{student.room.name}</Badge> : null}
+                          {student.room ? <Badge className="max-w-full whitespace-normal text-left leading-4">{student.room.name}</Badge> : null}
                         </div>
                       </TD>
-                      <TD className="no-print">
-                        <div className="flex justify-end gap-2">
+                      <TD className="no-print align-top">
+                        <div className="flex min-w-[210px] flex-wrap justify-end gap-2">
                           {!student.isRegistered ? (
-                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
                               Register
                             </Link>
                           ) : (
-                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
                               View
                             </Link>
                           )}
-                          <Link href={`/students/${student.id}/edit`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                          <Link href={`/students/${student.id}/edit`} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
                             Edit
                           </Link>
                           <DeleteButton id={student.id} action={deleteStudentAction} message="Delete this student record?" />

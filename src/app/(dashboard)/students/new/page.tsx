@@ -119,7 +119,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,0.8fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.8fr)]">
+      <div className="grid gap-6 2xl:grid-cols-[minmax(760px,1fr)_minmax(560px,0.75fr)]">
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Matching Uploaded Students</CardTitle>
@@ -135,15 +135,15 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
               <p className="p-5 text-sm text-[var(--muted-foreground)]">No uploaded student found. Super Admin can import students first.</p>
             ) : (
               <div className="overflow-x-auto">
-                <Table className="min-w-[760px] table-fixed">
+                <Table className="min-w-[940px]">
                   <THead>
                     <TR>
-                      <TH className="w-[22%]">Name (EN)</TH>
-                      <TH className="w-[16%]">Serial Number</TH>
+                      <TH className="w-[18%]">Name (EN)</TH>
+                      <TH className="w-[14%]">Serial Number</TH>
                       <TH className="w-[27%]">Institute</TH>
-                      <TH className="w-[15%]">Mobile</TH>
-                      <TH className="w-[12%]">Category</TH>
-                      <TH className="no-print w-[8%] text-right">Action</TH>
+                      <TH className="w-[13%]">Mobile</TH>
+                      <TH className="w-[16%]">Category</TH>
+                      <TH className="no-print w-[12%] min-w-[120px] text-right">Action</TH>
                     </TR>
                   </THead>
                   <TBody>
@@ -153,17 +153,17 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
                         <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
                         <TD className="break-words">{student.instituteNameEn}</TD>
                         <TD className="break-words font-semibold">{student.mobile}</TD>
-                        <TD>
-                          <div className="flex flex-col items-start gap-1">
-                            <span className="break-words">{student.category}</span>
-                            <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                        <TD className="align-top">
+                          <div className="flex max-w-[170px] flex-col items-start gap-1">
+                            <span className="break-words leading-5">{student.category}</span>
+                            <Badge className={student.isRegistered ? "max-w-full border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "max-w-full border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
                               {student.isRegistered ? "Registered" : "Pending"}
                             </Badge>
-                            {student.room ? <Badge>{student.room.name}</Badge> : null}
+                            {student.room ? <Badge className="max-w-full whitespace-normal text-left leading-4">{student.room.name}</Badge> : null}
                           </div>
                         </TD>
-                        <TD className="no-print text-right">
-                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                        <TD className="no-print text-right align-top">
+                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
                             {student.isRegistered ? "View" : "Register"}
                           </Link>
                         </TD>
@@ -176,7 +176,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
           </CardContent>
         </Card>
 
-        <Card className="min-w-0 xl:sticky xl:top-6 xl:self-start">
+        <Card className="min-w-0 2xl:sticky 2xl:top-6 2xl:self-start">
           <CardHeader>
             <CardTitle>Confirmation</CardTitle>
             <CardDescription>Select a student to view full details and confirm registration.</CardDescription>
@@ -249,7 +249,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm sm:grid-cols-[140px_minmax(0,1fr)]">
+    <div className="grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
       <span className="text-[var(--muted-foreground)]">{label}</span>
       <span className="break-words font-semibold text-[var(--foreground)]">{value}</span>
     </div>

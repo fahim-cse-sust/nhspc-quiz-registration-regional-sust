@@ -21,7 +21,7 @@ export function DeleteButton({
       }}
     >
       <input type="hidden" name="id" value={id} />
-      <Button variant="danger" type="submit" className="h-9 px-3">
+      <Button variant="danger" type="submit" className="h-9 whitespace-nowrap px-3">
         {label}
       </Button>
     </form>

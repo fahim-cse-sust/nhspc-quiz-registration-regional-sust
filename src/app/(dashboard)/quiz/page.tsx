@@ -55,7 +55,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
     prisma.room.findMany({ orderBy: { name: "asc" } }),
     prisma.student.findMany({
       where: { isRegistered: true, quizMark: { not: null } },
-      take: 10,
+      take: 40,
       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
       include: { room: true }
     }),
@@ -89,10 +89,10 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
       <section className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
         <Card className="animate-fade-up animation-delay-100 overflow-hidden">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 10 Rank List</CardTitle>
-            <CardDescription>Ranking is generated from saved quiz marks, highest first.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 40 Rank List</CardTitle>
+            <CardDescription>Ranking is generated from saved quiz marks, highest first. Showing top 40 students.</CardDescription>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="max-h-[760px] overflow-y-auto p-0">
             {rankList.length === 0 ? (
               <p className="p-5 text-sm text-[var(--muted-foreground)]">No quiz marks added yet.</p>
             ) : (

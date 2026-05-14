@@ -1,0 +1,210 @@
+diff --git a/src/app/(dashboard)/dashboard/page.tsx b/src/app/(dashboard)/dashboard/page.tsx
+index 8c1a3e3..49f4097 100644
+--- a/src/app/(dashboard)/dashboard/page.tsx
++++ b/src/app/(dashboard)/dashboard/page.tsx
+@@ -27,7 +27,7 @@ export default async function DashboardPage() {
+     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
+     prisma.student.findMany({
+       where: { isRegistered: true, quizMark: { not: null } },
+-      take: 5,
++      take: 40,
+       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+       include: { room: true }
+     }),
+@@ -106,10 +106,10 @@ export default async function DashboardPage() {
+ 
+         <Card className="animate-fade-up animation-delay-200 card-hover">
+           <CardHeader>
+-            <CardTitle>Live Top Rank Preview</CardTitle>
+-            <CardDescription>Top 5 scores from registered students.</CardDescription>
++            <CardTitle>Live Top 40 Rank Preview</CardTitle>
++            <CardDescription>Top 40 scores from registered students, highest marks first.</CardDescription>
+           </CardHeader>
+-          <CardContent className="space-y-3">
++          <CardContent className="max-h-[720px] space-y-3 overflow-y-auto pr-3">
+             {rankList.length === 0 ? (
+               <p className="text-sm text-[var(--muted-foreground)]">No quiz marks entered yet.</p>
+             ) : (
+diff --git a/src/app/(dashboard)/quiz/page.tsx b/src/app/(dashboard)/quiz/page.tsx
+index 2b32a07..4c05b27 100644
+--- a/src/app/(dashboard)/quiz/page.tsx
++++ b/src/app/(dashboard)/quiz/page.tsx
+@@ -55,7 +55,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+     prisma.room.findMany({ orderBy: { name: "asc" } }),
+     prisma.student.findMany({
+       where: { isRegistered: true, quizMark: { not: null } },
+-      take: 10,
++      take: 40,
+       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+       include: { room: true }
+     }),
+@@ -89,10 +89,10 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+       <section className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
+         <Card className="animate-fade-up animation-delay-100 overflow-hidden">
+           <CardHeader>
+-            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 10 Rank List</CardTitle>
+-            <CardDescription>Ranking is generated from saved quiz marks, highest first.</CardDescription>
++            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 40 Rank List</CardTitle>
++            <CardDescription>Ranking is generated from saved quiz marks, highest first. Showing top 40 students.</CardDescription>
+           </CardHeader>
+-          <CardContent className="p-0">
++          <CardContent className="max-h-[760px] overflow-y-auto p-0">
+             {rankList.length === 0 ? (
+               <p className="p-5 text-sm text-[var(--muted-foreground)]">No quiz marks added yet.</p>
+             ) : (
+diff --git a/src/app/(dashboard)/students/new/page.tsx b/src/app/(dashboard)/students/new/page.tsx
+index d580ace..037d7c8 100644
+--- a/src/app/(dashboard)/students/new/page.tsx
++++ b/src/app/(dashboard)/students/new/page.tsx
+@@ -119,7 +119,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+         </CardContent>
+       </Card>
+ 
+-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,0.8fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.8fr)]">
++      <div className="grid gap-6 2xl:grid-cols-[minmax(760px,1fr)_minmax(560px,0.75fr)]">
+         <Card className="min-w-0">
+           <CardHeader>
+             <CardTitle>Matching Uploaded Students</CardTitle>
+@@ -135,15 +135,15 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+               <p className="p-5 text-sm text-[var(--muted-foreground)]">No uploaded student found. Super Admin can import students first.</p>
+             ) : (
+               <div className="overflow-x-auto">
+-                <Table className="min-w-[760px] table-fixed">
++                <Table className="min-w-[940px]">
+                   <THead>
+                     <TR>
+-                      <TH className="w-[22%]">Name (EN)</TH>
+-                      <TH className="w-[16%]">Serial Number</TH>
++                      <TH className="w-[18%]">Name (EN)</TH>
++                      <TH className="w-[14%]">Serial Number</TH>
+                       <TH className="w-[27%]">Institute</TH>
+-                      <TH className="w-[15%]">Mobile</TH>
+-                      <TH className="w-[12%]">Category</TH>
+-                      <TH className="no-print w-[8%] text-right">Action</TH>
++                      <TH className="w-[13%]">Mobile</TH>
++                      <TH className="w-[16%]">Category</TH>
++                      <TH className="no-print w-[12%] min-w-[120px] text-right">Action</TH>
+                     </TR>
+                   </THead>
+                   <TBody>
+@@ -153,17 +153,17 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+                         <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
+                         <TD className="break-words">{student.instituteNameEn}</TD>
+                         <TD className="break-words font-semibold">{student.mobile}</TD>
+-                        <TD>
+-                          <div className="flex flex-col items-start gap-1">
+-                            <span className="break-words">{student.category}</span>
+-                            <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
++                        <TD className="align-top">
++                          <div className="flex max-w-[170px] flex-col items-start gap-1">
++                            <span className="break-words leading-5">{student.category}</span>
++                            <Badge className={student.isRegistered ? "max-w-full border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "max-w-full border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                               {student.isRegistered ? "Registered" : "Pending"}
+                             </Badge>
+-                            {student.room ? <Badge>{student.room.name}</Badge> : null}
++                            {student.room ? <Badge className="max-w-full whitespace-normal text-left leading-4">{student.room.name}</Badge> : null}
+                           </div>
+                         </TD>
+-                        <TD className="no-print text-right">
+-                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
++                        <TD className="no-print text-right align-top">
++                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                             {student.isRegistered ? "View" : "Register"}
+                           </Link>
+                         </TD>
+@@ -176,7 +176,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+           </CardContent>
+         </Card>
+ 
+-        <Card className="min-w-0 xl:sticky xl:top-6 xl:self-start">
++        <Card className="min-w-0 2xl:sticky 2xl:top-6 2xl:self-start">
+           <CardHeader>
+             <CardTitle>Confirmation</CardTitle>
+             <CardDescription>Select a student to view full details and confirm registration.</CardDescription>
+@@ -249,7 +249,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+ 
+ function Info({ label, value }: { label: string; value: string }) {
+   return (
+-    <div className="grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm sm:grid-cols-[140px_minmax(0,1fr)]">
++    <div className="grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm sm:grid-cols-[160px_minmax(0,1fr)]">
+       <span className="text-[var(--muted-foreground)]">{label}</span>
+       <span className="break-words font-semibold text-[var(--foreground)]">{value}</span>
+     </div>
+diff --git a/src/app/(dashboard)/students/page.tsx b/src/app/(dashboard)/students/page.tsx
+index 9046144..4529d21 100644
+--- a/src/app/(dashboard)/students/page.tsx
++++ b/src/app/(dashboard)/students/page.tsx
+@@ -148,15 +148,15 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
+             <p className="p-5 text-sm text-[var(--muted-foreground)]">No student record found.</p>
+           ) : (
+             <div className="overflow-x-auto">
+-              <Table className="min-w-[820px] table-fixed">
++              <Table className="min-w-[1080px]">
+                 <THead>
+                   <TR>
+-                    <TH className="w-[22%]">Name (EN)</TH>
+-                    <TH className="w-[16%]">Serial Number</TH>
+-                    <TH className="w-[28%]">Institute</TH>
+-                    <TH className="w-[15%]">Mobile</TH>
+-                    <TH className="w-[11%]">Category</TH>
+-                    <TH className="no-print w-[8%] text-right">Actions</TH>
++                    <TH className="w-[18%]">Name (EN)</TH>
++                    <TH className="w-[14%]">Serial Number</TH>
++                    <TH className="w-[27%]">Institute</TH>
++                    <TH className="w-[13%]">Mobile</TH>
++                    <TH className="w-[14%]">Category</TH>
++                    <TH className="no-print w-[14%] min-w-[220px] text-right">Actions</TH>
+                   </TR>
+                 </THead>
+                 <TBody>
+@@ -166,27 +166,27 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
+                       <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
+                       <TD className="break-words">{student.instituteNameEn}</TD>
+                       <TD className="break-words font-semibold">{student.mobile}</TD>
+-                      <TD>
+-                        <div className="flex flex-col items-start gap-1">
+-                          <span className="break-words">{student.category}</span>
+-                          <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
++                      <TD className="align-top">
++                        <div className="flex max-w-[170px] flex-col items-start gap-1">
++                          <span className="break-words leading-5">{student.category}</span>
++                          <Badge className={student.isRegistered ? "max-w-full border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "max-w-full border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                             {student.isRegistered ? "Registered" : "Pending"}
+                           </Badge>
+-                          {student.room ? <Badge>{student.room.name}</Badge> : null}
++                          {student.room ? <Badge className="max-w-full whitespace-normal text-left leading-4">{student.room.name}</Badge> : null}
+                         </div>
+                       </TD>
+-                      <TD className="no-print">
+-                        <div className="flex justify-end gap-2">
++                      <TD className="no-print align-top">
++                        <div className="flex min-w-[210px] flex-wrap justify-end gap-2">
+                           {!student.isRegistered ? (
+-                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
++                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                               Register
+                             </Link>
+                           ) : (
+-                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
++                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                               View
+                             </Link>
+                           )}
+-                          <Link href={`/students/${student.id}/edit`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
++                          <Link href={`/students/${student.id}/edit`} className="inline-flex h-9 items-center whitespace-nowrap rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                             Edit
+                           </Link>
+                           <DeleteButton id={student.id} action={deleteStudentAction} message="Delete this student record?" />
+diff --git a/src/components/forms/delete-button.tsx b/src/components/forms/delete-button.tsx
+index 4966dc5..59ac864 100644
+--- a/src/components/forms/delete-button.tsx
++++ b/src/components/forms/delete-button.tsx
+@@ -21,7 +21,7 @@ export function DeleteButton({
+       }}
+     >
+       <input type="hidden" name="id" value={id} />
+-      <Button variant="danger" type="submit" className="h-9 px-3">
++      <Button variant="danger" type="submit" className="h-9 whitespace-nowrap px-3">
+         {label}
+       </Button>
+     </form>
