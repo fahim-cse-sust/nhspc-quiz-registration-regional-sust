@@ -1,0 +1,311 @@
+diff --git a/src/actions/students.ts b/src/actions/students.ts
+index 7ce9b29..f118a42 100644
+--- a/src/actions/students.ts
++++ b/src/actions/students.ts
+@@ -118,7 +118,7 @@ function revalidateStudentPages() {
+   revalidatePath("/quiz");
+ }
+ 
+-async function reserveRoomSeat(roomId: string, currentRoomId?: string) {
++async function reserveRoomSeat(roomId: string, category: string, currentRoomId?: string) {
+   const rooms = await prisma.room.findMany({
+     select: {
+       id: true,
+@@ -137,7 +137,7 @@ async function reserveRoomSeat(roomId: string, currentRoomId?: string) {
+     allocatedSeats: statsMap.get(room.id)?.totalRegisteredInRoom ?? room.allocatedSeats
+   }));
+ 
+-  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts, currentRoomId);
++  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts, currentRoomId, category, statsMap);
+   const selectedRoom = roomOptions.find((room) => room.id === roomId);
+ 
+   if (!selectedRoom) {
+@@ -417,7 +417,8 @@ export async function registerUploadedStudentAction(
+ 
+   const parsed = registerUploadedStudentSchema.safeParse({
+     studentId: formData.get("studentId"),
+-    roomId: formData.get("roomId")
++    roomId: formData.get("roomId"),
++    confirmHalfOverride: formData.get("confirmHalfOverride")
+   });
+ 
+   if (!parsed.success) {
+@@ -425,6 +426,7 @@ export async function registerUploadedStudentAction(
+   }
+ 
+   const { studentId, roomId } = parsed.data;
++  const confirmHalfOverride = parsed.data.confirmHalfOverride === "true";
+   let seatReserved = false;
+   let warning: string | null = null;
+ 
+@@ -441,7 +443,14 @@ export async function registerUploadedStudentAction(
+ 
+     warning = getCategoryHalfCapacityWarning(student.category, stats, room.name);
+ 
+-    await reserveRoomSeat(roomId);
++    if (warning && !confirmHalfOverride) {
++      return {
++        warning,
++        error: `${warning} Click the confirm button again to override the half-capacity warning.`
++      };
++    }
++
++    await reserveRoomSeat(roomId, student.category);
+     seatReserved = true;
+ 
+     await prisma.student.update({
+diff --git a/src/app/(dashboard)/students/new/page.tsx b/src/app/(dashboard)/students/new/page.tsx
+index c70d1d8..d580ace 100644
+--- a/src/app/(dashboard)/students/new/page.tsx
++++ b/src/app/(dashboard)/students/new/page.tsx
+@@ -76,7 +76,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+     ...room,
+     allocatedSeats: statsMap.get(room.id)?.totalRegisteredInRoom ?? room.allocatedSeats
+   }));
+-  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts).map((room) => ({
++  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts, undefined, selectedStudent?.category, statsMap).map((room) => ({
+     ...room,
+     stats: statsMap.get(room.id) ?? {
+       roomId: room.id,
+diff --git a/src/components/forms/register-uploaded-student-form.tsx b/src/components/forms/register-uploaded-student-form.tsx
+index ef6a564..67540c6 100644
+--- a/src/components/forms/register-uploaded-student-form.tsx
++++ b/src/components/forms/register-uploaded-student-form.tsx
+@@ -1,6 +1,6 @@
+ "use client";
+ 
+-import { useActionState, useMemo, useState } from "react";
++import { useActionState, useEffect, useMemo, useState, type FormEvent } from "react";
+ import { registerUploadedStudentAction, type RegisterStudentState } from "@/actions/students";
+ import type { RoomAllocationOption, RoomRegistrationStats } from "@/lib/rooms";
+ import { Badge } from "@/components/ui/badge";
+@@ -26,7 +26,7 @@ type RoomWithStats = RoomAllocationOption & {
+ 
+ function normaliseCategory(category: string) {
+   const value = category.trim().toLowerCase();
+-  if (value.includes("higher") || value.includes("hsc")) return "higherSecondary";
++  if (value.includes("senior") || value.includes("higher") || value.includes("hsc")) return "higherSecondary";
+   if (value.includes("junior") || value === "jr") return "junior";
+   return "other";
+ }
+@@ -39,7 +39,7 @@ function categorySoftWarning(category: string, room: RoomWithStats | undefined)
+   const count = normalised === "higherSecondary" ? room.stats.higherSecondaryCount : room.stats.juniorCount;
+   if (count < room.stats.halfCapacity) return null;
+ 
+-  const label = normalised === "higherSecondary" ? "Higher Secondary" : "Junior";
++  const label = normalised === "higherSecondary" ? "Senior / Higher Secondary" : "Junior";
+   return `Warning: ${label} allocation for this room has exceeded half of the room capacity. You can still register this student.`;
+ }
+ 
+@@ -51,6 +51,18 @@ export function RegisterUploadedStudentForm({ student, rooms }: { student: Regis
+   const selectedRoom = useMemo(() => rooms.find((room) => room.id === selectedRoomId), [rooms, selectedRoomId]);
+   const liveWarning = categorySoftWarning(student.category, selectedRoom);
+   const hasSelectableRoom = rooms.some((room) => room.isSelectable);
++  const [halfOverrideArmed, setHalfOverrideArmed] = useState(false);
++
++  useEffect(() => {
++    setHalfOverrideArmed(false);
++  }, [selectedRoomId, student.id]);
++
++  function handleSubmit(event: FormEvent<HTMLFormElement>) {
++    if (!liveWarning || halfOverrideArmed) return;
++
++    event.preventDefault();
++    setHalfOverrideArmed(true);
++  }
+ 
+   if (student.isRegistered) {
+     return (
+@@ -61,8 +73,9 @@ export function RegisterUploadedStudentForm({ student, rooms }: { student: Regis
+   }
+ 
+   return (
+-    <form action={formAction} className="space-y-5">
++    <form action={formAction} onSubmit={handleSubmit} className="space-y-5">
+       <input type="hidden" name="studentId" value={student.id} />
++      <input type="hidden" name="confirmHalfOverride" value={halfOverrideArmed ? "true" : "false"} />
+ 
+       {state.error ? (
+         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+@@ -114,7 +127,7 @@ export function RegisterUploadedStudentForm({ student, rooms }: { student: Regis
+               <div className="grid gap-2 sm:grid-cols-2">
+                 <RoomStat label="Total capacity" value={selectedRoom.capacity} />
+                 <RoomStat label="Total registered" value={selectedRoom.stats.totalRegisteredInRoom} />
+-                <RoomStat label="Higher Secondary" value={selectedRoom.stats.higherSecondaryCount} />
++                <RoomStat label="Senior / Higher Secondary" value={selectedRoom.stats.higherSecondaryCount} />
+                 <RoomStat label="Junior" value={selectedRoom.stats.juniorCount} />
+                 <RoomStat label="Half limit per category" value={selectedRoom.stats.halfCapacity} />
+                 <RoomStat label="Available seats" value={selectedRoom.availableSeats} />
+@@ -124,8 +137,9 @@ export function RegisterUploadedStudentForm({ student, rooms }: { student: Regis
+                 {selectedRoom.lockReason}
+               </p>
+               {liveWarning ? (
+-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+-                  {liveWarning}
++                <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
++                  <p>{liveWarning}</p>
++                  <p>Click Confirm Registration once to read this warning, then click it again to register anyway.</p>
+                 </div>
+               ) : null}
+             </div>
+@@ -135,8 +149,14 @@ export function RegisterUploadedStudentForm({ student, rooms }: { student: Regis
+         </div>
+       </div>
+ 
++      {halfOverrideArmed && liveWarning ? (
++        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
++          Half-capacity warning acknowledged. Click the button again to confirm this override.
++        </div>
++      ) : null}
++
+       <Button type="submit" disabled={pending || !hasSelectableRoom || !selectedRoom?.isSelectable} className="w-full sm:w-auto">
+-        {pending ? "Registering..." : "Confirm Registration"}
++        {pending ? "Registering..." : halfOverrideArmed && liveWarning ? "Confirm Override and Register" : "Confirm Registration"}
+       </Button>
+     </form>
+   );
+diff --git a/src/lib/rooms.ts b/src/lib/rooms.ts
+index ca84c3c..8f77c52 100644
+--- a/src/lib/rooms.ts
++++ b/src/lib/rooms.ts
+@@ -56,13 +56,15 @@ export function normaliseStudentCategory(category: string | null | undefined): N
+     .replace(/[\s_/-]+/g, " ");
+ 
+   if (!value) return "other";
+-  if (value.includes("higher") || value.includes("hsc") || value.includes("higher secondary")) return "higherSecondary";
++  if (value.includes("senior") || value.includes("higher") || value.includes("hsc") || value.includes("higher secondary")) {
++    return "higherSecondary";
++  }
+   if (value.includes("junior") || value === "jr" || value.includes(" jr")) return "junior";
+   return "other";
+ }
+ 
+ export function categoryDisplayName(category: NormalizedCategory) {
+-  if (category === "higherSecondary") return "Higher Secondary";
++  if (category === "higherSecondary") return "Senior / Higher Secondary";
+   if (category === "junior") return "Junior";
+   return "Other";
+ }
+@@ -174,21 +176,74 @@ export function getActivePriority(rooms: RoomAllocationInput[], currentRoomId?:
+   return Math.min(...availableRooms.map((room) => room.priority));
+ }
+ 
+-export function buildRoomAllocationOptions(rooms: RoomAllocationInput[], currentRoomId?: string): RoomAllocationOption[] {
++function getCategoryCountForRoom(statsMap: Map<string, RoomRegistrationStats> | undefined, room: RoomAllocationInput, category: string) {
++  const stats = statsMap?.get(room.id) ?? emptyRoomStats(room);
++  return getCategoryCountForStats(stats, category);
++}
++
++function getCategoryHalfForRoom(statsMap: Map<string, RoomRegistrationStats> | undefined, room: RoomAllocationInput) {
++  const stats = statsMap?.get(room.id) ?? emptyRoomStats(room);
++  return stats.halfCapacity;
++}
++
++function isRoomCategoryGateCleared(
++  room: RoomAllocationInput,
++  category: string,
++  statsMap: Map<string, RoomRegistrationStats> | undefined,
++  currentRoomId?: string
++) {
++  const availableSeats = Math.max(room.capacity - room.allocatedSeats + (room.id === currentRoomId ? 1 : 0), 0);
++  if (room.isManuallyClosed || availableSeats <= 0) return true;
++
++  const halfCapacity = getCategoryHalfForRoom(statsMap, room);
++  if (halfCapacity <= 0) return true;
++
++  return getCategoryCountForRoom(statsMap, room, category) >= halfCapacity;
++}
++
++function isUnlockedForCategoryPriority(
++  rooms: RoomAllocationInput[],
++  targetRoom: RoomAllocationInput,
++  category: string,
++  statsMap: Map<string, RoomRegistrationStats> | undefined,
++  currentRoomId?: string
++) {
++  const categoryType = normaliseStudentCategory(category);
++  if (categoryType === "other") return false;
++
++  const earlierRooms = sortRoomsByPriority(rooms).filter((room) => room.priority < targetRoom.priority);
++  return earlierRooms.every((room) => isRoomCategoryGateCleared(room, category, statsMap, currentRoomId));
++}
++
++export function buildRoomAllocationOptions(
++  rooms: RoomAllocationInput[],
++  currentRoomId?: string,
++  category?: string,
++  statsMap?: Map<string, RoomRegistrationStats>
++): RoomAllocationOption[] {
+   const normalisedRooms = rooms.map(normaliseRoom);
+-  const activePriority = getActivePriority(normalisedRooms, currentRoomId);
++  const categoryType = normaliseStudentCategory(category);
++  const useCategoryPriority = Boolean(category) && categoryType !== "other" && statsMap !== undefined;
++  const activePriority = useCategoryPriority ? null : getActivePriority(normalisedRooms, currentRoomId);
++  const categoryLabel = categoryDisplayName(categoryType);
+ 
+   return sortRoomsByPriority(normalisedRooms).map((room) => {
+     const availableSeats = Math.max(room.capacity - room.allocatedSeats + (room.id === currentRoomId ? 1 : 0), 0);
+     const isFull = availableSeats <= 0;
+     const isCurrentRoom = room.id === currentRoomId;
+-    const isAutoPriorityRoom = activePriority !== null && room.priority === activePriority;
++    const isAutoPriorityRoom = useCategoryPriority
++      ? isUnlockedForCategoryPriority(normalisedRooms, room, category || "", statsMap, currentRoomId)
++      : activePriority !== null && room.priority === activePriority;
+     const isSelectable =
+       !isFull &&
+       (isCurrentRoom || (!room.isManuallyClosed && (room.isManuallyOpen || isAutoPriorityRoom)));
+ 
+     let statusLabel = "Locked";
+-    let lockReason = activePriority === null ? "No available priority room." : `Priority ${activePriority} must be filled first.`;
++    let lockReason = useCategoryPriority
++      ? `Earlier priority room must reach its ${categoryLabel} half-capacity first.`
++      : activePriority === null
++        ? "No available priority room."
++        : `Priority ${activePriority} must be filled first.`;
+ 
+     if (isFull) {
+       statusLabel = "Full";
+@@ -203,8 +258,10 @@ export function buildRoomAllocationOptions(rooms: RoomAllocationInput[], current
+       statusLabel = "Open manually";
+       lockReason = "Opened manually by Super Admin.";
+     } else if (isAutoPriorityRoom) {
+-      statusLabel = "Open by priority";
+-      lockReason = "This is the current priority room.";
++      statusLabel = useCategoryPriority ? `Open for ${categoryLabel}` : "Open by priority";
++      lockReason = useCategoryPriority
++        ? `${categoryLabel} registration can use this room now. Earlier priority room remains selectable until it is full.`
++        : "This is the current priority room.";
+     }
+ 
+     return {
+@@ -219,8 +276,14 @@ export function buildRoomAllocationOptions(rooms: RoomAllocationInput[], current
+   });
+ }
+ 
+-export function canSelectRoomByPriority(rooms: RoomAllocationInput[], roomId: string, currentRoomId?: string) {
+-  const selectedRoom = buildRoomAllocationOptions(rooms, currentRoomId).find((room) => room.id === roomId);
++export function canSelectRoomByPriority(
++  rooms: RoomAllocationInput[],
++  roomId: string,
++  currentRoomId?: string,
++  category?: string,
++  statsMap?: Map<string, RoomRegistrationStats>
++) {
++  const selectedRoom = buildRoomAllocationOptions(rooms, currentRoomId, category, statsMap).find((room) => room.id === roomId);
+   return selectedRoom?.isSelectable ?? false;
+ }
+ 
+diff --git a/src/lib/validation.ts b/src/lib/validation.ts
+index 7944e0e..dbc2bd5 100644
+--- a/src/lib/validation.ts
++++ b/src/lib/validation.ts
+@@ -44,7 +44,8 @@ export const uploadedStudentSchema = z.object({
+ 
+ export const registerUploadedStudentSchema = z.object({
+   studentId: z.string().min(1, "Student ID is missing."),
+-  roomId: z.string().min(1, "Please select a room.")
++  roomId: z.string().min(1, "Please select a room."),
++  confirmHalfOverride: z.string().optional()
+ });
+ 
+ // Kept for any legacy imports; new student records use uploadedStudentSchema.

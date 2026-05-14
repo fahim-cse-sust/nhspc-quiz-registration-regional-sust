@@ -76,7 +76,7 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
     ...room,
     allocatedSeats: statsMap.get(room.id)?.totalRegisteredInRoom ?? room.allocatedSeats
   }));
-  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts).map((room) => ({
+  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts, undefined, selectedStudent?.category, statsMap).map((room) => ({
     ...room,
     stats: statsMap.get(room.id) ?? {
       roomId: room.id,
@@ -119,66 +119,67 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <Card>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(440px,0.8fr)] 2xl:grid-cols-[minmax(0,1fr)_minmax(520px,0.8fr)]">
+        <Card className="min-w-0">
           <CardHeader>
             <CardTitle>Matching Uploaded Students</CardTitle>
+            <CardDescription>
+              Showing compact information only. Click Register/View to see the complete uploaded record.
+            </CardDescription>
             <CardDescription>
               {students.length} student(s) shown{students.length === TAKE_LIMIT ? `, limited to first ${TAKE_LIMIT}` : ""}.
             </CardDescription>
           </CardHeader>
-          <CardContent className="overflow-x-auto p-0">
+          <CardContent className="p-0">
             {students.length === 0 ? (
               <p className="p-5 text-sm text-[var(--muted-foreground)]">No uploaded student found. Super Admin can import students first.</p>
             ) : (
-              <Table>
-                <THead>
-                  <TR>
-                    <TH>Mobile</TH>
-                    <TH>Name (EN)</TH>
-                    <TH>Serial Number</TH>
-                    <TH>Contest</TH>
-                    <TH>Category</TH>
-                    <TH>Venue</TH>
-                    <TH>Institute Name (EN)</TH>
-                    <TH>Status</TH>
-                    <TH>Room</TH>
-                    <TH className="no-print text-right">Select</TH>
-                  </TR>
-                </THead>
-                <TBody>
-                  {students.map((student) => (
-                    <TR key={student.id}>
-                      <TD className="font-semibold">{student.mobile}</TD>
-                      <TD>{student.nameEn || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                      <TD>{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                      <TD>{student.contest}</TD>
-                      <TD>{student.category}</TD>
-                      <TD>{student.venue}</TD>
-                      <TD>{student.instituteNameEn}</TD>
-                      <TD>
-                        <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
-                          {student.isRegistered ? "Registered" : "Pending"}
-                        </Badge>
-                      </TD>
-                      <TD>{student.room ? <Badge>{student.room.name}</Badge> : <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                      <TD className="no-print text-right">
-                        <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
-                          {student.isRegistered ? "View" : "Register"}
-                        </Link>
-                      </TD>
+              <div className="overflow-x-auto">
+                <Table className="min-w-[760px] table-fixed">
+                  <THead>
+                    <TR>
+                      <TH className="w-[22%]">Name (EN)</TH>
+                      <TH className="w-[16%]">Serial Number</TH>
+                      <TH className="w-[27%]">Institute</TH>
+                      <TH className="w-[15%]">Mobile</TH>
+                      <TH className="w-[12%]">Category</TH>
+                      <TH className="no-print w-[8%] text-right">Action</TH>
                     </TR>
-                  ))}
-                </TBody>
-              </Table>
+                  </THead>
+                  <TBody>
+                    {students.map((student) => (
+                      <TR key={student.id}>
+                        <TD className="break-words font-semibold">{student.nameEn || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
+                        <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
+                        <TD className="break-words">{student.instituteNameEn}</TD>
+                        <TD className="break-words font-semibold">{student.mobile}</TD>
+                        <TD>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="break-words">{student.category}</span>
+                            <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                              {student.isRegistered ? "Registered" : "Pending"}
+                            </Badge>
+                            {student.room ? <Badge>{student.room.name}</Badge> : null}
+                          </div>
+                        </TD>
+                        <TD className="no-print text-right">
+                          <Link href={searchLink(student.id, q, category)} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                            {student.isRegistered ? "View" : "Register"}
+                          </Link>
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="min-w-0 xl:sticky xl:top-6 xl:self-start">
           <CardHeader>
             <CardTitle>Confirmation</CardTitle>
-            <CardDescription>Select a pending student from the list to confirm registration.</CardDescription>
+            <CardDescription>Select a student to view full details and confirm registration.</CardDescription>
           </CardHeader>
           <CardContent>
             {!selectedStudent ? (
@@ -186,21 +187,47 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
             ) : (
               <div className="space-y-5">
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)] p-4">
-                  <p className="text-sm font-semibold">Selected Student</p>
-                  <div className="mt-3 grid gap-2 text-sm">
-                    <Info label="Mobile" value={selectedStudent.mobile} />
-                    {selectedStudent.nameEn ? <Info label="Name (EN)" value={selectedStudent.nameEn} /> : null}
-                    {selectedStudent.serialNumber ? <Info label="Serial Number" value={selectedStudent.serialNumber} /> : null}
-                    {selectedStudent.email ? <Info label="Email" value={selectedStudent.email} /> : null}
-                    <Info label="Contest" value={selectedStudent.contest} />
-                    <Info label="Category" value={selectedStudent.category} />
-                    <Info label="Venue" value={selectedStudent.venue} />
-                    <Info label="Institute" value={selectedStudent.instituteNameEn} />
-                    {selectedStudent.upazila ? <Info label="Upazila" value={selectedStudent.upazila} /> : null}
-                    {selectedStudent.district ? <Info label="District" value={selectedStudent.district} /> : null}
-                    {selectedStudent.division ? <Info label="Division" value={selectedStudent.division} /> : null}
-                    <Info label="Status" value={selectedStudent.isRegistered ? "Registered" : "Pending"} />
-                    {selectedStudent.room ? <Info label="Room" value={selectedStudent.room.name} /> : null}
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold">Selected Student</p>
+                      <p className="text-xs text-[var(--muted-foreground)]">Complete uploaded information is shown here.</p>
+                    </div>
+                    <Badge className={selectedStudent.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                      {selectedStudent.isRegistered ? "Registered" : "Pending"}
+                    </Badge>
+                  </div>
+
+                  <div className="mt-4 space-y-4">
+                    <section>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Student identity</p>
+                      <div className="grid gap-2">
+                        {selectedStudent.nameEn ? <Info label="Name (EN)" value={selectedStudent.nameEn} /> : null}
+                        {selectedStudent.serialNumber ? <Info label="Serial Number" value={selectedStudent.serialNumber} /> : null}
+                        <Info label="Mobile" value={selectedStudent.mobile} />
+                        {selectedStudent.email ? <Info label="Email" value={selectedStudent.email} /> : null}
+                      </div>
+                    </section>
+
+                    <section>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Contest and institute</p>
+                      <div className="grid gap-2">
+                        <Info label="Contest" value={selectedStudent.contest} />
+                        <Info label="Category" value={selectedStudent.category} />
+                        <Info label="Venue" value={selectedStudent.venue} />
+                        <Info label="Institute" value={selectedStudent.instituteNameEn} />
+                      </div>
+                    </section>
+
+                    <section>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-[var(--muted-foreground)]">Location and registration</p>
+                      <div className="grid gap-2">
+                        {selectedStudent.upazila ? <Info label="Upazila" value={selectedStudent.upazila} /> : null}
+                        {selectedStudent.district ? <Info label="District" value={selectedStudent.district} /> : null}
+                        {selectedStudent.division ? <Info label="Division" value={selectedStudent.division} /> : null}
+                        <Info label="Status" value={selectedStudent.isRegistered ? "Registered" : "Pending"} />
+                        {selectedStudent.room ? <Info label="Room" value={selectedStudent.room.name} /> : null}
+                      </div>
+                    </section>
                   </div>
                 </div>
 
@@ -222,9 +249,9 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
+    <div className="grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm sm:grid-cols-[140px_minmax(0,1fr)]">
       <span className="text-[var(--muted-foreground)]">{label}</span>
-      <span className="text-right font-semibold">{value}</span>
+      <span className="break-words font-semibold text-[var(--foreground)]">{value}</span>
     </div>
   );
 }

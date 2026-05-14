@@ -44,7 +44,8 @@ export const uploadedStudentSchema = z.object({
 
 export const registerUploadedStudentSchema = z.object({
   studentId: z.string().min(1, "Student ID is missing."),
-  roomId: z.string().min(1, "Please select a room.")
+  roomId: z.string().min(1, "Please select a room."),
+  confirmHalfOverride: z.string().optional()
 });
 
 // Kept for any legacy imports; new student records use uploadedStudentSchema.

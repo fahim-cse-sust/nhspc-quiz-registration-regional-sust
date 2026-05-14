@@ -12,7 +12,6 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { DeleteButton } from "@/components/forms/delete-button";
 import { deleteStudentAction } from "@/actions/students";
 import { PrintButton } from "@/components/print-button";
-import { formatDate } from "@/lib/utils";
 
 type StudentsPageSearchParams = {
   q?: string;
@@ -85,7 +84,9 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-black tracking-tight">Students</h1>
-          <p className="text-sm text-[var(--muted-foreground)]">Search uploaded records by mobile, serial number, or name, see registration status, edit, delete and export students.</p>
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Compact list for quick search. Open Register or Edit to view complete student information.
+          </p>
         </div>
         <div className="no-print flex flex-col gap-2 sm:flex-row">
           <PrintButton />
@@ -138,74 +139,64 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <Card>
         <CardHeader>
           <CardTitle>Student List</CardTitle>
-          <CardDescription>{students.length} student(s) found.</CardDescription>
+          <CardDescription>
+            {students.length} student(s) found. Showing only name, serial number, institute, mobile, category and actions to keep the table readable.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
+        <CardContent className="p-0">
           {students.length === 0 ? (
             <p className="p-5 text-sm text-[var(--muted-foreground)]">No student record found.</p>
           ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Mobile</TH>
-                  <TH>Name (EN)</TH>
-                  <TH>Serial Number</TH>
-                  <TH>Email</TH>
-                  <TH>Contest</TH>
-                  <TH>Category</TH>
-                  <TH>Venue</TH>
-                  <TH>Institute Name (EN)</TH>
-                  <TH>Upazila</TH>
-                  <TH>District</TH>
-                  <TH>Division</TH>
-                  <TH>Status</TH>
-                  <TH>Room</TH>
-                  <TH>Registered By</TH>
-                  <TH>Registered At</TH>
-                  <TH>Quiz Mark</TH>
-                  <TH className="no-print text-right">Actions</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {students.map((student) => (
-                  <TR key={student.id}>
-                    <TD className="font-semibold">{student.mobile}</TD>
-                    <TD>{student.nameEn || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.email || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.contest}</TD>
-                    <TD>{student.category}</TD>
-                    <TD>{student.venue}</TD>
-                    <TD>{student.instituteNameEn}</TD>
-                    <TD>{student.upazila || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.district || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.division || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>
-                      <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
-                        {student.isRegistered ? "Registered" : "Pending"}
-                      </Badge>
-                    </TD>
-                    <TD>{student.room ? <Badge>{student.room.name}</Badge> : <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.registeredBy?.name ?? <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.registeredAt ? formatDate(student.registeredAt) : <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD>{student.quizMark ?? <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
-                    <TD className="no-print">
-                      <div className="flex justify-end gap-2">
-                        {!student.isRegistered ? (
-                          <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
-                            Register
-                          </Link>
-                        ) : null}
-                        <Link href={`/students/${student.id}/edit`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
-                          Edit
-                        </Link>
-                        <DeleteButton id={student.id} action={deleteStudentAction} message="Delete this student record?" />
-                      </div>
-                    </TD>
+            <div className="overflow-x-auto">
+              <Table className="min-w-[820px] table-fixed">
+                <THead>
+                  <TR>
+                    <TH className="w-[22%]">Name (EN)</TH>
+                    <TH className="w-[16%]">Serial Number</TH>
+                    <TH className="w-[28%]">Institute</TH>
+                    <TH className="w-[15%]">Mobile</TH>
+                    <TH className="w-[11%]">Category</TH>
+                    <TH className="no-print w-[8%] text-right">Actions</TH>
                   </TR>
-                ))}
-              </TBody>
-            </Table>
+                </THead>
+                <TBody>
+                  {students.map((student) => (
+                    <TR key={student.id}>
+                      <TD className="break-words font-semibold">{student.nameEn || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
+                      <TD className="break-words font-semibold">{student.serialNumber || <span className="text-sm text-[var(--muted-foreground)]">—</span>}</TD>
+                      <TD className="break-words">{student.instituteNameEn}</TD>
+                      <TD className="break-words font-semibold">{student.mobile}</TD>
+                      <TD>
+                        <div className="flex flex-col items-start gap-1">
+                          <span className="break-words">{student.category}</span>
+                          <Badge className={student.isRegistered ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200"}>
+                            {student.isRegistered ? "Registered" : "Pending"}
+                          </Badge>
+                          {student.room ? <Badge>{student.room.name}</Badge> : null}
+                        </div>
+                      </TD>
+                      <TD className="no-print">
+                        <div className="flex justify-end gap-2">
+                          {!student.isRegistered ? (
+                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                              Register
+                            </Link>
+                          ) : (
+                            <Link href={`/students/new?studentId=${student.id}`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                              View
+                            </Link>
+                          )}
+                          <Link href={`/students/${student.id}/edit`} className="inline-flex h-9 items-center rounded-xl border border-[var(--border)] px-3 text-sm font-semibold hover:bg-[var(--muted)]">
+                            Edit
+                          </Link>
+                          <DeleteButton id={student.id} action={deleteStudentAction} message="Delete this student record?" />
+                        </div>
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

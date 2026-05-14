@@ -118,7 +118,7 @@ function revalidateStudentPages() {
   revalidatePath("/quiz");
 }
 
-async function reserveRoomSeat(roomId: string, currentRoomId?: string) {
+async function reserveRoomSeat(roomId: string, category: string, currentRoomId?: string) {
   const rooms = await prisma.room.findMany({
     select: {
       id: true,
@@ -137,7 +137,7 @@ async function reserveRoomSeat(roomId: string, currentRoomId?: string) {
     allocatedSeats: statsMap.get(room.id)?.totalRegisteredInRoom ?? room.allocatedSeats
   }));
 
-  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts, currentRoomId);
+  const roomOptions = buildRoomAllocationOptions(roomsWithLiveCounts, currentRoomId, category, statsMap);
   const selectedRoom = roomOptions.find((room) => room.id === roomId);
 
   if (!selectedRoom) {
@@ -417,7 +417,8 @@ export async function registerUploadedStudentAction(
 
   const parsed = registerUploadedStudentSchema.safeParse({
     studentId: formData.get("studentId"),
-    roomId: formData.get("roomId")
+    roomId: formData.get("roomId"),
+    confirmHalfOverride: formData.get("confirmHalfOverride")
   });
 
   if (!parsed.success) {
@@ -425,6 +426,7 @@ export async function registerUploadedStudentAction(
   }
 
   const { studentId, roomId } = parsed.data;
+  const confirmHalfOverride = parsed.data.confirmHalfOverride === "true";
   let seatReserved = false;
   let warning: string | null = null;
 
@@ -441,7 +443,14 @@ export async function registerUploadedStudentAction(
 
     warning = getCategoryHalfCapacityWarning(student.category, stats, room.name);
 
-    await reserveRoomSeat(roomId);
+    if (warning && !confirmHalfOverride) {
+      return {
+        warning,
+        error: `${warning} Click the confirm button again to override the half-capacity warning.`
+      };
+    }
+
+    await reserveRoomSeat(roomId, student.category);
     seatReserved = true;
 
     await prisma.student.update({

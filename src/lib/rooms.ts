@@ -56,13 +56,15 @@ export function normaliseStudentCategory(category: string | null | undefined): N
     .replace(/[\s_/-]+/g, " ");
 
   if (!value) return "other";
-  if (value.includes("higher") || value.includes("hsc") || value.includes("higher secondary")) return "higherSecondary";
+  if (value.includes("senior") || value.includes("higher") || value.includes("hsc") || value.includes("higher secondary")) {
+    return "higherSecondary";
+  }
   if (value.includes("junior") || value === "jr" || value.includes(" jr")) return "junior";
   return "other";
 }
 
 export function categoryDisplayName(category: NormalizedCategory) {
-  if (category === "higherSecondary") return "Higher Secondary";
+  if (category === "higherSecondary") return "Senior / Higher Secondary";
   if (category === "junior") return "Junior";
   return "Other";
 }
@@ -174,21 +176,74 @@ export function getActivePriority(rooms: RoomAllocationInput[], currentRoomId?: 
   return Math.min(...availableRooms.map((room) => room.priority));
 }
 
-export function buildRoomAllocationOptions(rooms: RoomAllocationInput[], currentRoomId?: string): RoomAllocationOption[] {
+function getCategoryCountForRoom(statsMap: Map<string, RoomRegistrationStats> | undefined, room: RoomAllocationInput, category: string) {
+  const stats = statsMap?.get(room.id) ?? emptyRoomStats(room);
+  return getCategoryCountForStats(stats, category);
+}
+
+function getCategoryHalfForRoom(statsMap: Map<string, RoomRegistrationStats> | undefined, room: RoomAllocationInput) {
+  const stats = statsMap?.get(room.id) ?? emptyRoomStats(room);
+  return stats.halfCapacity;
+}
+
+function isRoomCategoryGateCleared(
+  room: RoomAllocationInput,
+  category: string,
+  statsMap: Map<string, RoomRegistrationStats> | undefined,
+  currentRoomId?: string
+) {
+  const availableSeats = Math.max(room.capacity - room.allocatedSeats + (room.id === currentRoomId ? 1 : 0), 0);
+  if (room.isManuallyClosed || availableSeats <= 0) return true;
+
+  const halfCapacity = getCategoryHalfForRoom(statsMap, room);
+  if (halfCapacity <= 0) return true;
+
+  return getCategoryCountForRoom(statsMap, room, category) >= halfCapacity;
+}
+
+function isUnlockedForCategoryPriority(
+  rooms: RoomAllocationInput[],
+  targetRoom: RoomAllocationInput,
+  category: string,
+  statsMap: Map<string, RoomRegistrationStats> | undefined,
+  currentRoomId?: string
+) {
+  const categoryType = normaliseStudentCategory(category);
+  if (categoryType === "other") return false;
+
+  const earlierRooms = sortRoomsByPriority(rooms).filter((room) => room.priority < targetRoom.priority);
+  return earlierRooms.every((room) => isRoomCategoryGateCleared(room, category, statsMap, currentRoomId));
+}
+
+export function buildRoomAllocationOptions(
+  rooms: RoomAllocationInput[],
+  currentRoomId?: string,
+  category?: string,
+  statsMap?: Map<string, RoomRegistrationStats>
+): RoomAllocationOption[] {
   const normalisedRooms = rooms.map(normaliseRoom);
-  const activePriority = getActivePriority(normalisedRooms, currentRoomId);
+  const categoryType = normaliseStudentCategory(category);
+  const useCategoryPriority = Boolean(category) && categoryType !== "other" && statsMap !== undefined;
+  const activePriority = useCategoryPriority ? null : getActivePriority(normalisedRooms, currentRoomId);
+  const categoryLabel = categoryDisplayName(categoryType);
 
   return sortRoomsByPriority(normalisedRooms).map((room) => {
     const availableSeats = Math.max(room.capacity - room.allocatedSeats + (room.id === currentRoomId ? 1 : 0), 0);
     const isFull = availableSeats <= 0;
     const isCurrentRoom = room.id === currentRoomId;
-    const isAutoPriorityRoom = activePriority !== null && room.priority === activePriority;
+    const isAutoPriorityRoom = useCategoryPriority
+      ? isUnlockedForCategoryPriority(normalisedRooms, room, category || "", statsMap, currentRoomId)
+      : activePriority !== null && room.priority === activePriority;
     const isSelectable =
       !isFull &&
       (isCurrentRoom || (!room.isManuallyClosed && (room.isManuallyOpen || isAutoPriorityRoom)));
 
     let statusLabel = "Locked";
-    let lockReason = activePriority === null ? "No available priority room." : `Priority ${activePriority} must be filled first.`;
+    let lockReason = useCategoryPriority
+      ? `Earlier priority room must reach its ${categoryLabel} half-capacity first.`
+      : activePriority === null
+        ? "No available priority room."
+        : `Priority ${activePriority} must be filled first.`;
 
     if (isFull) {
       statusLabel = "Full";
@@ -203,8 +258,10 @@ export function buildRoomAllocationOptions(rooms: RoomAllocationInput[], current
       statusLabel = "Open manually";
       lockReason = "Opened manually by Super Admin.";
     } else if (isAutoPriorityRoom) {
-      statusLabel = "Open by priority";
-      lockReason = "This is the current priority room.";
+      statusLabel = useCategoryPriority ? `Open for ${categoryLabel}` : "Open by priority";
+      lockReason = useCategoryPriority
+        ? `${categoryLabel} registration can use this room now. Earlier priority room remains selectable until it is full.`
+        : "This is the current priority room.";
     }
 
     return {
@@ -219,8 +276,14 @@ export function buildRoomAllocationOptions(rooms: RoomAllocationInput[], current
   });
 }
 
-export function canSelectRoomByPriority(rooms: RoomAllocationInput[], roomId: string, currentRoomId?: string) {
-  const selectedRoom = buildRoomAllocationOptions(rooms, currentRoomId).find((room) => room.id === roomId);
+export function canSelectRoomByPriority(
+  rooms: RoomAllocationInput[],
+  roomId: string,
+  currentRoomId?: string,
+  category?: string,
+  statsMap?: Map<string, RoomRegistrationStats>
+) {
+  const selectedRoom = buildRoomAllocationOptions(rooms, currentRoomId, category, statsMap).find((room) => room.id === roomId);
   return selectedRoom?.isSelectable ?? false;
 }
 
