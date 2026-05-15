@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Award, Medal, Search, Sparkles, Trophy } from "lucide-react";
+import { Award, Download, Medal, Search, Sparkles, Trophy } from "lucide-react";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getQuizConfig, ordinalRank } from "@/lib/quiz";
@@ -88,9 +88,17 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
 
       <section className="grid gap-6 xl:grid-cols-[0.82fr_1.18fr]">
         <Card className="animate-fade-up animation-delay-100 overflow-hidden">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 40 Rank List</CardTitle>
-            <CardDescription>Ranking is generated from saved quiz marks, highest first. Showing top 40 students.</CardDescription>
+          <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 40 Rank List</CardTitle>
+              <CardDescription>Ranking is generated from saved quiz marks, highest first. Showing top 40 students.</CardDescription>
+            </div>
+            <a
+              href="/api/quiz/winners/export"
+              className="no-print inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold hover:bg-[var(--muted)]"
+            >
+              <Download className="h-4 w-4" /> Export Top 40 Excel
+            </a>
           </CardHeader>
           <CardContent className="max-h-[760px] overflow-y-auto p-0">
             {rankList.length === 0 ? (
