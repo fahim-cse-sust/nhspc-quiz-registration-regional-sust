@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, DoorOpen, Plus, Trophy, Upload, Users } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import { getQuizConfig, ordinalRank } from "@/lib/quiz";
+import { buildCategoryWiseRankList, getQuizConfig, ordinalRank } from "@/lib/quiz";
 import { getRoomStatisticsMap } from "@/lib/rooms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,7 @@ import { formatDate } from "@/lib/utils";
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [uploadedCount, registeredCount, pendingCount, roomCount, rooms, recentStudents, markedStudents, rankList, quizConfig] = await Promise.all([
+  const [uploadedCount, registeredCount, pendingCount, roomCount, rooms, recentStudents, markedStudents, rankedCandidateStudents, quizConfig] = await Promise.all([
     prisma.student.count(),
     prisma.student.count({ where: { isRegistered: true } }),
     prisma.student.count({ where: { isRegistered: false } }),
@@ -27,13 +27,13 @@ export default async function DashboardPage() {
     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
     prisma.student.findMany({
       where: { isRegistered: true, quizMark: { not: null } },
-      take: 40,
       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
       include: { room: true }
     }),
     getQuizConfig()
   ]);
 
+  const rankList = buildCategoryWiseRankList(rankedCandidateStudents, 20);
   const statsMap = await getRoomStatisticsMap(rooms.map((room) => room.id));
   const totalCapacity = rooms.reduce((sum, room) => sum + room.capacity, 0);
   const availableSeats = Math.max(totalCapacity - registeredCount, 0);
@@ -106,17 +106,17 @@ export default async function DashboardPage() {
 
         <Card className="animate-fade-up animation-delay-200 card-hover">
           <CardHeader>
-            <CardTitle>Live Top 40 Rank Preview</CardTitle>
-            <CardDescription>Top 40 scores from registered students, highest marks first.</CardDescription>
+            <CardTitle>Live Category-wise Rank Preview</CardTitle>
+            <CardDescription>Top 20 Junior and top 20 Senior / Higher Secondary students.</CardDescription>
           </CardHeader>
           <CardContent className="max-h-[720px] space-y-3 overflow-y-auto pr-3">
             {rankList.length === 0 ? (
               <p className="text-sm text-[var(--muted-foreground)]">No quiz marks entered yet.</p>
             ) : (
-              rankList.map((student, index) => (
+              rankList.map(({ student, rank, categoryLabel }) => (
                 <div key={student.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--muted)]/50 p-4">
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--primary)]">{ordinalRank(index + 1)} Place</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--primary)]">{categoryLabel} · {ordinalRank(rank)} Place</p>
                     <p className="font-bold">{student.mobile}</p>
                     <p className="text-xs text-[var(--muted-foreground)]">{student.room?.name ?? "No room"}</p>
                   </div>

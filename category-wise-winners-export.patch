@@ -1,0 +1,324 @@
+diff --git a/src/app/(dashboard)/dashboard/page.tsx b/src/app/(dashboard)/dashboard/page.tsx
+index 49f4097..4e887ee 100644
+--- a/src/app/(dashboard)/dashboard/page.tsx
++++ b/src/app/(dashboard)/dashboard/page.tsx
+@@ -2,7 +2,7 @@ import Link from "next/link";
+ import { CheckCircle2, DoorOpen, Plus, Trophy, Upload, Users } from "lucide-react";
+ import { prisma } from "@/lib/prisma";
+ import { requireUser } from "@/lib/auth";
+-import { getQuizConfig, ordinalRank } from "@/lib/quiz";
++import { buildCategoryWiseRankList, getQuizConfig, ordinalRank } from "@/lib/quiz";
+ import { getRoomStatisticsMap } from "@/lib/rooms";
+ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Badge } from "@/components/ui/badge";
+@@ -12,7 +12,7 @@ import { formatDate } from "@/lib/utils";
+ export default async function DashboardPage() {
+   const user = await requireUser();
+ 
+-  const [uploadedCount, registeredCount, pendingCount, roomCount, rooms, recentStudents, markedStudents, rankList, quizConfig] = await Promise.all([
++  const [uploadedCount, registeredCount, pendingCount, roomCount, rooms, recentStudents, markedStudents, rankedCandidateStudents, quizConfig] = await Promise.all([
+     prisma.student.count(),
+     prisma.student.count({ where: { isRegistered: true } }),
+     prisma.student.count({ where: { isRegistered: false } }),
+@@ -27,13 +27,13 @@ export default async function DashboardPage() {
+     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
+     prisma.student.findMany({
+       where: { isRegistered: true, quizMark: { not: null } },
+-      take: 40,
+       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+       include: { room: true }
+     }),
+     getQuizConfig()
+   ]);
+ 
++  const rankList = buildCategoryWiseRankList(rankedCandidateStudents, 20);
+   const statsMap = await getRoomStatisticsMap(rooms.map((room) => room.id));
+   const totalCapacity = rooms.reduce((sum, room) => sum + room.capacity, 0);
+   const availableSeats = Math.max(totalCapacity - registeredCount, 0);
+@@ -106,17 +106,17 @@ export default async function DashboardPage() {
+ 
+         <Card className="animate-fade-up animation-delay-200 card-hover">
+           <CardHeader>
+-            <CardTitle>Live Top 40 Rank Preview</CardTitle>
+-            <CardDescription>Top 40 scores from registered students, highest marks first.</CardDescription>
++            <CardTitle>Live Category-wise Rank Preview</CardTitle>
++            <CardDescription>Top 20 Junior and top 20 Senior / Higher Secondary students.</CardDescription>
+           </CardHeader>
+           <CardContent className="max-h-[720px] space-y-3 overflow-y-auto pr-3">
+             {rankList.length === 0 ? (
+               <p className="text-sm text-[var(--muted-foreground)]">No quiz marks entered yet.</p>
+             ) : (
+-              rankList.map((student, index) => (
++              rankList.map(({ student, rank, categoryLabel }) => (
+                 <div key={student.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--muted)]/50 p-4">
+                   <div>
+-                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--primary)]">{ordinalRank(index + 1)} Place</p>
++                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--primary)]">{categoryLabel} · {ordinalRank(rank)} Place</p>
+                     <p className="font-bold">{student.mobile}</p>
+                     <p className="text-xs text-[var(--muted-foreground)]">{student.room?.name ?? "No room"}</p>
+                   </div>
+diff --git a/src/app/(dashboard)/quiz/page.tsx b/src/app/(dashboard)/quiz/page.tsx
+index 1c3728a..446820b 100644
+--- a/src/app/(dashboard)/quiz/page.tsx
++++ b/src/app/(dashboard)/quiz/page.tsx
+@@ -2,7 +2,7 @@ import Link from "next/link";
+ import { Award, Download, Medal, Search, Sparkles, Trophy } from "lucide-react";
+ import { Prisma, Role } from "@prisma/client";
+ import { prisma } from "@/lib/prisma";
+-import { getQuizConfig, ordinalRank } from "@/lib/quiz";
++import { buildCategoryWiseRankList, getQuizConfig, ordinalRank } from "@/lib/quiz";
+ import { requireUser } from "@/lib/auth";
+ import { QuizMarkForm } from "@/components/forms/quiz-mark-form";
+ import { QuizTotalMarksForm } from "@/components/forms/quiz-total-marks-form";
+@@ -46,7 +46,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+       : {})
+   };
+ 
+-  const [students, rooms, rankList, markedCount, registeredCount] = await Promise.all([
++  const [students, rooms, rankedCandidateStudents, markedCount, registeredCount] = await Promise.all([
+     prisma.student.findMany({
+       where,
+       orderBy: [{ room: { name: "asc" } }, { mobile: "asc" }],
+@@ -55,7 +55,6 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+     prisma.room.findMany({ orderBy: { name: "asc" } }),
+     prisma.student.findMany({
+       where: { isRegistered: true, quizMark: { not: null } },
+-      take: 40,
+       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+       include: { room: true }
+     }),
+@@ -63,7 +62,8 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+     prisma.student.count({ where: { isRegistered: true } })
+   ]);
+ 
+-  const highestMark = rankList[0]?.quizMark ?? null;
++  const rankList = buildCategoryWiseRankList(rankedCandidateStudents, 20);
++  const highestMark = rankedCandidateStudents[0]?.quizMark ?? null;
+ 
+   return (
+     <div className="space-y-6">
+@@ -90,14 +90,14 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+         <Card className="animate-fade-up animation-delay-100 overflow-hidden">
+           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+             <div>
+-              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 40 Rank List</CardTitle>
+-              <CardDescription>Ranking is generated from saved quiz marks, highest first. Showing top 40 students.</CardDescription>
++              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Category-wise Top 40 Rank List</CardTitle>
++              <CardDescription>Showing top 20 Junior and top 20 Senior / Higher Secondary students. Rank resets inside each category.</CardDescription>
+             </div>
+             <a
+               href="/api/quiz/winners/export"
+               className="no-print inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold hover:bg-[var(--muted)]"
+             >
+-              <Download className="h-4 w-4" /> Export Top 40 Excel
++              <Download className="h-4 w-4" /> Export Winners Excel
+             </a>
+           </CardHeader>
+           <CardContent className="max-h-[760px] overflow-y-auto p-0">
+@@ -109,20 +109,22 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+                   <THead>
+                     <TR>
+                       <TH>Rank</TH>
++                      <TH>Category</TH>
+                       <TH>Student</TH>
+                       <TH>Room</TH>
+                       <TH className="text-right">Mark</TH>
+                     </TR>
+                   </THead>
+                   <TBody>
+-                    {rankList.map((student, index) => (
+-                      <TR key={student.id} className={index < 3 ? "bg-amber-50/50 dark:bg-amber-950/10" : undefined}>
++                    {rankList.map(({ student, rank, categoryLabel }) => (
++                      <TR key={student.id} className={rank <= 3 ? "bg-amber-50/50 dark:bg-amber-950/10" : undefined}>
+                         <TD className="font-black">
+                           <span className="inline-flex items-center gap-2">
+-                            {index < 3 ? <Medal className="h-4 w-4 text-amber-500" /> : <Award className="h-4 w-4 text-[var(--muted-foreground)]" />}
+-                            {ordinalRank(index + 1)}
++                            {rank <= 3 ? <Medal className="h-4 w-4 text-amber-500" /> : <Award className="h-4 w-4 text-[var(--muted-foreground)]" />}
++                            {ordinalRank(rank)}
+                           </span>
+                         </TD>
++                        <TD><Badge>{categoryLabel}</Badge></TD>
+                         <TD>
+                           <p className="font-bold">{student.mobile}</p>
+                           <p className="text-xs text-[var(--muted-foreground)]">{student.nameEn || student.instituteNameEn}</p>
+diff --git a/src/app/api/quiz/winners/export/route.ts b/src/app/api/quiz/winners/export/route.ts
+index 3bbadd6..dea2f08 100644
+--- a/src/app/api/quiz/winners/export/route.ts
++++ b/src/app/api/quiz/winners/export/route.ts
+@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
+ import * as XLSX from "xlsx";
+ import { prisma } from "@/lib/prisma";
+ import { getCurrentUser } from "@/lib/auth";
+-import { getQuizConfig, ordinalRank } from "@/lib/quiz";
++import { buildCategoryWiseRankList } from "@/lib/quiz";
+ 
+ export async function GET() {
+   const user = await getCurrentUser();
+@@ -10,86 +10,60 @@ export async function GET() {
+     return NextResponse.json({ error: "Unauthorised" }, { status: 401 });
+   }
+ 
+-  const [quizConfig, students] = await Promise.all([
+-    getQuizConfig(),
+-    prisma.student.findMany({
+-      where: { isRegistered: true, quizMark: { not: null } },
+-      take: 40,
+-      orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+-      include: { room: true, registeredBy: { select: { name: true, email: true } } }
+-    })
+-  ]);
++  const students = await prisma.student.findMany({
++    where: { isRegistered: true, quizMark: { not: null } },
++    orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
++    include: { room: true }
++  });
+ 
+-  const rows = students.map((student, index) => ({
+-    Rank: ordinalRank(index + 1),
+-    "Rank Number": index + 1,
+-    "Quiz Mark": student.quizMark ?? "",
+-    "Total Mark": quizConfig.totalMarks,
+-    Mobile: student.mobile,
++  const rankList = buildCategoryWiseRankList(students, 20);
++
++  const rows = rankList.map(({ student, rank }) => ({
++    Rank: rank,
+     "Name (EN)": student.nameEn || "",
++    Upazila: student.upazila || "",
++    Division: student.division || "",
++    District: student.district || "",
+     "Serial Number": student.serialNumber || "",
+     Email: student.email || "",
++    Mobile: student.mobile,
+     Contest: student.contest,
+     Category: student.category,
+     "Venue Name": student.venue,
+     "Institute Name(EN)": student.instituteNameEn,
+-    Upazila: student.upazila || "",
+-    District: student.district || "",
+-    Division: student.division || "",
+-    "Registration Status": student.isRegistered ? "Registered" : "Pending",
+     Room: student.room?.name ?? "",
+-    "Registered By": student.registeredBy ? `${student.registeredBy.name} (${student.registeredBy.email})` : "",
+-    "Registered At": student.registeredAt ? student.registeredAt.toISOString() : "",
+-    "Quiz Mark Updated At": student.quizMarkUpdatedAt ? student.quizMarkUpdatedAt.toISOString() : "",
+-    "Quiz Mark Updated By": student.quizMarkUpdatedBy || "",
+-    Note: student.note || "",
+-    "Student ID": student.id,
+-    "Room ID": student.roomId || "",
+-    "Registered By ID": student.registeredById || "",
+-    "Created At": student.createdAt.toISOString(),
+-    "Updated At": student.updatedAt.toISOString(),
+-    "Legacy Name": student.name || "",
+-    "Legacy Institution": student.institution || "",
+-    "Legacy Class Name": student.className || "",
+-    "Birth Certificate Number": student.birthCertificateNumber || "",
+-    "Legacy Phone": student.phone || ""
++    "Quiz Mark": student.quizMark ?? "",
++    Note: student.note || ""
+   }));
+ 
+   const worksheet = XLSX.utils.json_to_sheet(rows);
+   worksheet["!cols"] = [
+-    { wch: 12 },
+-    { wch: 12 },
+-    { wch: 12 },
+-    { wch: 12 },
+-    { wch: 16 },
+-    { wch: 26 },
+-    { wch: 18 },
++    { wch: 8 },
+     { wch: 28 },
+     { wch: 18 },
+-    { wch: 22 },
+-    { wch: 18 },
+-    { wch: 18 },
+-    { wch: 32 },
+-    { wch: 18 },
+     { wch: 18 },
+     { wch: 18 },
+     { wch: 18 },
+     { wch: 28 },
++    { wch: 16 },
++    { wch: 18 },
+     { wch: 24 },
+-    { wch: 24 },
+-    { wch: 24 },
++    { wch: 22 },
++    { wch: 34 },
++    { wch: 18 },
++    { wch: 12 },
+     { wch: 30 }
+   ];
+ 
+   const workbook = XLSX.utils.book_new();
+-  XLSX.utils.book_append_sheet(workbook, worksheet, "Top 40 Winners");
++  XLSX.utils.book_append_sheet(workbook, worksheet, "Category Winners");
+   const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
+   const body = new Uint8Array(buffer);
+ 
+   return new NextResponse(body, {
+     headers: {
+       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+-      "Content-Disposition": 'attachment; filename="nhspc-top-40-winners.xlsx"'
++      "Content-Disposition": 'attachment; filename="nhspc-category-wise-winners.xlsx"'
+     }
+   });
+ }
+diff --git a/src/lib/quiz.ts b/src/lib/quiz.ts
+index 97beb93..546f2d4 100644
+--- a/src/lib/quiz.ts
++++ b/src/lib/quiz.ts
+@@ -1,4 +1,5 @@
+ import { prisma } from "@/lib/prisma";
++import { categoryDisplayName, normaliseStudentCategory, type NormalizedCategory } from "@/lib/rooms";
+ 
+ export const QUIZ_CONFIG_KEY = "sylhet-regional-quiz";
+ export const DEFAULT_TOTAL_MARKS = 50;
+@@ -20,3 +21,45 @@ export function ordinalRank(rank: number) {
+   const value = rank % 100;
+   return `${rank}${suffixes[(value - 20) % 10] || suffixes[value] || suffixes[0]}`;
+ }
++
++
++export type WinnerCategory = Extract<NormalizedCategory, "junior" | "higherSecondary">;
++
++export type CategoryRankedWinner<T extends { category: string | null; quizMark: number | null; mobile?: string | null }> = {
++  student: T;
++  rank: number;
++  categoryGroup: WinnerCategory;
++  categoryLabel: string;
++};
++
++export function buildCategoryWiseRankList<T extends { category: string | null; quizMark: number | null; mobile?: string | null }>(
++  students: T[],
++  perCategory = 20
++): CategoryRankedWinner<T>[] {
++  const grouped: Record<WinnerCategory, T[]> = {
++    junior: [],
++    higherSecondary: []
++  };
++
++  const sortedStudents = [...students].sort((first, second) => {
++    const markDifference = (second.quizMark ?? -1) - (first.quizMark ?? -1);
++    if (markDifference !== 0) return markDifference;
++    return String(first.mobile || "").localeCompare(String(second.mobile || ""));
++  });
++
++  for (const student of sortedStudents) {
++    const category = normaliseStudentCategory(student.category);
++    if (category !== "junior" && category !== "higherSecondary") continue;
++    if (grouped[category].length >= perCategory) continue;
++    grouped[category].push(student);
++  }
++
++  return (["junior", "higherSecondary"] as const).flatMap((categoryGroup) =>
++    grouped[categoryGroup].map((student, index) => ({
++      student,
++      rank: index + 1,
++      categoryGroup,
++      categoryLabel: categoryDisplayName(categoryGroup)
++    }))
++  );
++}

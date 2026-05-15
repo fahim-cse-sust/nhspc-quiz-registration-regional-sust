@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Award, Download, Medal, Search, Sparkles, Trophy } from "lucide-react";
 import { Prisma, Role } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getQuizConfig, ordinalRank } from "@/lib/quiz";
+import { buildCategoryWiseRankList, getQuizConfig, ordinalRank } from "@/lib/quiz";
 import { requireUser } from "@/lib/auth";
 import { QuizMarkForm } from "@/components/forms/quiz-mark-form";
 import { QuizTotalMarksForm } from "@/components/forms/quiz-total-marks-form";
@@ -46,7 +46,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
       : {})
   };
 
-  const [students, rooms, rankList, markedCount, registeredCount] = await Promise.all([
+  const [students, rooms, rankedCandidateStudents, markedCount, registeredCount] = await Promise.all([
     prisma.student.findMany({
       where,
       orderBy: [{ room: { name: "asc" } }, { mobile: "asc" }],
@@ -55,7 +55,6 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
     prisma.room.findMany({ orderBy: { name: "asc" } }),
     prisma.student.findMany({
       where: { isRegistered: true, quizMark: { not: null } },
-      take: 40,
       orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
       include: { room: true }
     }),
@@ -63,7 +62,8 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
     prisma.student.count({ where: { isRegistered: true } })
   ]);
 
-  const highestMark = rankList[0]?.quizMark ?? null;
+  const rankList = buildCategoryWiseRankList(rankedCandidateStudents, 20);
+  const highestMark = rankedCandidateStudents[0]?.quizMark ?? null;
 
   return (
     <div className="space-y-6">
@@ -90,14 +90,14 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
         <Card className="animate-fade-up animation-delay-100 overflow-hidden">
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Top 40 Rank List</CardTitle>
-              <CardDescription>Ranking is generated from saved quiz marks, highest first. Showing top 40 students.</CardDescription>
+              <CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-[var(--primary)]" /> Category-wise Top 40 Rank List</CardTitle>
+              <CardDescription>Showing top 20 Junior and top 20 Senior / Higher Secondary students. Rank resets inside each category.</CardDescription>
             </div>
             <a
               href="/api/quiz/winners/export"
               className="no-print inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-semibold hover:bg-[var(--muted)]"
             >
-              <Download className="h-4 w-4" /> Export Top 40 Excel
+              <Download className="h-4 w-4" /> Export Winners Excel
             </a>
           </CardHeader>
           <CardContent className="max-h-[760px] overflow-y-auto p-0">
@@ -109,20 +109,22 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
                   <THead>
                     <TR>
                       <TH>Rank</TH>
+                      <TH>Category</TH>
                       <TH>Student</TH>
                       <TH>Room</TH>
                       <TH className="text-right">Mark</TH>
                     </TR>
                   </THead>
                   <TBody>
-                    {rankList.map((student, index) => (
-                      <TR key={student.id} className={index < 3 ? "bg-amber-50/50 dark:bg-amber-950/10" : undefined}>
+                    {rankList.map(({ student, rank, categoryLabel }) => (
+                      <TR key={student.id} className={rank <= 3 ? "bg-amber-50/50 dark:bg-amber-950/10" : undefined}>
                         <TD className="font-black">
                           <span className="inline-flex items-center gap-2">
-                            {index < 3 ? <Medal className="h-4 w-4 text-amber-500" /> : <Award className="h-4 w-4 text-[var(--muted-foreground)]" />}
-                            {ordinalRank(index + 1)}
+                            {rank <= 3 ? <Medal className="h-4 w-4 text-amber-500" /> : <Award className="h-4 w-4 text-[var(--muted-foreground)]" />}
+                            {ordinalRank(rank)}
                           </span>
                         </TD>
+                        <TD><Badge>{categoryLabel}</Badge></TD>
                         <TD>
                           <p className="font-bold">{student.mobile}</p>
                           <p className="text-xs text-[var(--muted-foreground)]">{student.nameEn || student.instituteNameEn}</p>
