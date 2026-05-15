@@ -25,14 +25,14 @@ export function ordinalRank(rank: number) {
 
 export type WinnerCategory = Extract<NormalizedCategory, "junior" | "higherSecondary">;
 
-export type CategoryRankedWinner<T extends { category: string | null; quizMark: number | null; mobile?: string | null }> = {
+export type CategoryRankedWinner<T extends { category: string | null; quizMark: number | null; serialNumber?: string | null }> = {
   student: T;
   rank: number;
   categoryGroup: WinnerCategory;
   categoryLabel: string;
 };
 
-export function buildCategoryWiseRankList<T extends { category: string | null; quizMark: number | null; mobile?: string | null }>(
+export function buildCategoryWiseRankList<T extends { category: string | null; quizMark: number | null; serialNumber?: string | null }>(
   students: T[],
   perCategory = 20
 ): CategoryRankedWinner<T>[] {
@@ -44,7 +44,7 @@ export function buildCategoryWiseRankList<T extends { category: string | null; q
   const sortedStudents = [...students].sort((first, second) => {
     const markDifference = (second.quizMark ?? -1) - (first.quizMark ?? -1);
     if (markDifference !== 0) return markDifference;
-    return String(first.mobile || "").localeCompare(String(second.mobile || ""));
+    return String(first.serialNumber || "").localeCompare(String(second.serialNumber || ""));
   });
 
   for (const student of sortedStudents) {

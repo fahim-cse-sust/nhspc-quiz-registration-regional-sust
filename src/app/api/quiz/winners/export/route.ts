@@ -12,7 +12,7 @@ export async function GET() {
 
   const students = await prisma.student.findMany({
     where: { isRegistered: true, quizMark: { not: null } },
-    orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+    orderBy: [{ quizMark: "desc" }, { serialNumber: "asc" }],
     include: { room: true }
   });
 

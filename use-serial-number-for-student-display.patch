@@ -1,0 +1,189 @@
+diff --git a/src/actions/quiz.ts b/src/actions/quiz.ts
+index 9a1f579..85e438d 100644
+--- a/src/actions/quiz.ts
++++ b/src/actions/quiz.ts
+@@ -25,12 +25,12 @@ export async function updateQuizTotalMarksAction(_prevState: ActionState, formDa
+   const highestMarkedStudent = await prisma.student.findFirst({
+     where: { quizMark: { not: null } },
+     orderBy: { quizMark: "desc" },
+-    select: { quizMark: true, mobile: true }
++    select: { quizMark: true, serialNumber: true }
+   });
+ 
+   if (highestMarkedStudent?.quizMark != null && parsed.data.totalMarks < highestMarkedStudent.quizMark) {
+     return {
+-      error: `Total mark cannot be lower than the current highest mark (${highestMarkedStudent.quizMark}) by ${highestMarkedStudent.mobile}.`
++      error: `Total mark cannot be lower than the current highest mark (${highestMarkedStudent.quizMark}) by Serial Number ${highestMarkedStudent.serialNumber}.`
+     };
+   }
+ 
+diff --git a/src/app/(dashboard)/dashboard/page.tsx b/src/app/(dashboard)/dashboard/page.tsx
+index 4e887ee..c5f9894 100644
+--- a/src/app/(dashboard)/dashboard/page.tsx
++++ b/src/app/(dashboard)/dashboard/page.tsx
+@@ -27,7 +27,7 @@ export default async function DashboardPage() {
+     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
+     prisma.student.findMany({
+       where: { isRegistered: true, quizMark: { not: null } },
+-      orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
++      orderBy: [{ quizMark: "desc" }, { serialNumber: "asc" }],
+       include: { room: true }
+     }),
+     getQuizConfig()
+@@ -81,7 +81,7 @@ export default async function DashboardPage() {
+               <Table>
+                 <THead>
+                   <TR>
+-                    <TH>Mobile</TH>
++                    <TH>Serial Number</TH>
+                     <TH>Institute Name (EN)</TH>
+                     <TH>Category</TH>
+                     <TH>Room</TH>
+@@ -91,7 +91,7 @@ export default async function DashboardPage() {
+                 <TBody>
+                   {recentStudents.map((student) => (
+                     <TR key={student.id}>
+-                      <TD className="font-semibold">{student.mobile}</TD>
++                      <TD className="font-semibold">{student.serialNumber}</TD>
+                       <TD>{student.nameEn || student.instituteNameEn}</TD>
+                       <TD>{student.category}</TD>
+                       <TD>{student.room ? <Badge>{student.room.name}</Badge> : "—"}</TD>
+@@ -117,7 +117,7 @@ export default async function DashboardPage() {
+                 <div key={student.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--muted)]/50 p-4">
+                   <div>
+                     <p className="text-xs font-bold uppercase tracking-wide text-[var(--primary)]">{categoryLabel} · {ordinalRank(rank)} Place</p>
+-                    <p className="font-bold">{student.mobile}</p>
++                    <p className="font-bold">{student.serialNumber}</p>
+                     <p className="text-xs text-[var(--muted-foreground)]">{student.room?.name ?? "No room"}</p>
+                   </div>
+                   <p className="text-xl font-black text-[var(--primary)]">{student.quizMark}/{quizConfig.totalMarks}</p>
+diff --git a/src/app/(dashboard)/quiz/page.tsx b/src/app/(dashboard)/quiz/page.tsx
+index 446820b..9d9cb75 100644
+--- a/src/app/(dashboard)/quiz/page.tsx
++++ b/src/app/(dashboard)/quiz/page.tsx
+@@ -49,13 +49,13 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+   const [students, rooms, rankedCandidateStudents, markedCount, registeredCount] = await Promise.all([
+     prisma.student.findMany({
+       where,
+-      orderBy: [{ room: { name: "asc" } }, { mobile: "asc" }],
++      orderBy: [{ room: { name: "asc" } }, { serialNumber: "asc" }],
+       include: { room: true }
+     }),
+     prisma.room.findMany({ orderBy: { name: "asc" } }),
+     prisma.student.findMany({
+       where: { isRegistered: true, quizMark: { not: null } },
+-      orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
++      orderBy: [{ quizMark: "desc" }, { serialNumber: "asc" }],
+       include: { room: true }
+     }),
+     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
+@@ -126,7 +126,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+                         </TD>
+                         <TD><Badge>{categoryLabel}</Badge></TD>
+                         <TD>
+-                          <p className="font-bold">{student.mobile}</p>
++                          <p className="font-bold">{student.serialNumber}</p>
+                           <p className="text-xs text-[var(--muted-foreground)]">{student.nameEn || student.instituteNameEn}</p>
+                         </TD>
+                         <TD>{student.room ? <Badge>{student.room.name}</Badge> : "—"}</TD>
+@@ -172,7 +172,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+           <form className="grid gap-3 md:grid-cols-[1fr_240px_auto]">
+             <div className="relative">
+               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
+-              <Input className="pl-9" name="q" defaultValue={q} placeholder="Search mobile, serial number, or name, e.g. FAHim" />
++              <Input className="pl-9" name="q" defaultValue={q} placeholder="Search serial number or name, e.g. SN-001 or FAHim" />
+             </div>
+             <Select name="room" defaultValue={room}>
+               <option value="">All rooms</option>
+@@ -216,7 +216,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+                 {students.map((student) => (
+                   <TR key={student.id}>
+                     <TD>
+-                      <p className="font-bold">{student.mobile}</p>
++                      <p className="font-bold">{student.serialNumber}</p>
+                       <p className="text-xs text-[var(--muted-foreground)]">{student.nameEn || student.instituteNameEn}</p>
+                     </TD>
+                     <TD>{student.category}</TD>
+@@ -235,7 +235,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
+                     <TD className="no-print text-right">
+                       <QuizMarkForm
+                         studentId={student.id}
+-                        studentName={student.mobile}
++                        studentName={student.serialNumber}
+                         quizMark={student.quizMark}
+                         totalMarks={quizConfig.totalMarks}
+                       />
+diff --git a/src/app/(dashboard)/students/new/page.tsx b/src/app/(dashboard)/students/new/page.tsx
+index 9ee0ab2..1633b5a 100644
+--- a/src/app/(dashboard)/students/new/page.tsx
++++ b/src/app/(dashboard)/students/new/page.tsx
+@@ -103,11 +103,11 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
+       <Card className="no-print">
+         <CardHeader>
+           <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5 text-[var(--primary)]" /> Find Uploaded Student</CardTitle>
+-          <CardDescription>Search by mobile, serial number, or student name. Search is case-insensitive. You can also filter by category.</CardDescription>
++          <CardDescription>Search by serial number, student name, or mobile. Search is case-insensitive. You can also filter by category.</CardDescription>
+         </CardHeader>
+         <CardContent>
+           <form className="grid gap-3 md:grid-cols-[1fr_240px_auto]">
+-            <Input name="q" defaultValue={q} placeholder="Search mobile, serial number, or name, e.g. FAHim" />
++            <Input name="q" defaultValue={q} placeholder="Search serial number, name, or mobile, e.g. SN-001 or FAHim" />
+             <Select name="category" defaultValue={category}>
+               <option value="">All categories</option>
+               {categories.map((item) => (
+diff --git a/src/app/(dashboard)/students/page.tsx b/src/app/(dashboard)/students/page.tsx
+index 67e897a..d00e6a2 100644
+--- a/src/app/(dashboard)/students/page.tsx
++++ b/src/app/(dashboard)/students/page.tsx
+@@ -113,7 +113,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
+       <Card className="no-print">
+         <CardContent>
+           <form className="grid gap-3 lg:grid-cols-[1fr_220px_220px_190px_auto]">
+-            <Input name="q" defaultValue={q} placeholder="Search mobile, serial number, or name, e.g. FAHim" />
++            <Input name="q" defaultValue={q} placeholder="Search serial number, name, or mobile, e.g. SN-001 or FAHim" />
+             <Select name="category" defaultValue={category}>
+               <option value="">All categories</option>
+               {categories.map((item) => (
+diff --git a/src/app/api/quiz/winners/export/route.ts b/src/app/api/quiz/winners/export/route.ts
+index dea2f08..e808f6b 100644
+--- a/src/app/api/quiz/winners/export/route.ts
++++ b/src/app/api/quiz/winners/export/route.ts
+@@ -12,7 +12,7 @@ export async function GET() {
+ 
+   const students = await prisma.student.findMany({
+     where: { isRegistered: true, quizMark: { not: null } },
+-    orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
++    orderBy: [{ quizMark: "desc" }, { serialNumber: "asc" }],
+     include: { room: true }
+   });
+ 
+diff --git a/src/lib/quiz.ts b/src/lib/quiz.ts
+index 546f2d4..787174a 100644
+--- a/src/lib/quiz.ts
++++ b/src/lib/quiz.ts
+@@ -25,14 +25,14 @@ export function ordinalRank(rank: number) {
+ 
+ export type WinnerCategory = Extract<NormalizedCategory, "junior" | "higherSecondary">;
+ 
+-export type CategoryRankedWinner<T extends { category: string | null; quizMark: number | null; mobile?: string | null }> = {
++export type CategoryRankedWinner<T extends { category: string | null; quizMark: number | null; serialNumber?: string | null }> = {
+   student: T;
+   rank: number;
+   categoryGroup: WinnerCategory;
+   categoryLabel: string;
+ };
+ 
+-export function buildCategoryWiseRankList<T extends { category: string | null; quizMark: number | null; mobile?: string | null }>(
++export function buildCategoryWiseRankList<T extends { category: string | null; quizMark: number | null; serialNumber?: string | null }>(
+   students: T[],
+   perCategory = 20
+ ): CategoryRankedWinner<T>[] {
+@@ -44,7 +44,7 @@ export function buildCategoryWiseRankList<T extends { category: string | null; q
+   const sortedStudents = [...students].sort((first, second) => {
+     const markDifference = (second.quizMark ?? -1) - (first.quizMark ?? -1);
+     if (markDifference !== 0) return markDifference;
+-    return String(first.mobile || "").localeCompare(String(second.mobile || ""));
++    return String(first.serialNumber || "").localeCompare(String(second.serialNumber || ""));
+   });
+ 
+   for (const student of sortedStudents) {

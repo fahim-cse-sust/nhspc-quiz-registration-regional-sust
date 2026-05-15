@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
     prisma.student.findMany({
       where: { isRegistered: true, quizMark: { not: null } },
-      orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+      orderBy: [{ quizMark: "desc" }, { serialNumber: "asc" }],
       include: { room: true }
     }),
     getQuizConfig()
@@ -81,7 +81,7 @@ export default async function DashboardPage() {
               <Table>
                 <THead>
                   <TR>
-                    <TH>Mobile</TH>
+                    <TH>Serial Number</TH>
                     <TH>Institute Name (EN)</TH>
                     <TH>Category</TH>
                     <TH>Room</TH>
@@ -91,7 +91,7 @@ export default async function DashboardPage() {
                 <TBody>
                   {recentStudents.map((student) => (
                     <TR key={student.id}>
-                      <TD className="font-semibold">{student.mobile}</TD>
+                      <TD className="font-semibold">{student.serialNumber}</TD>
                       <TD>{student.nameEn || student.instituteNameEn}</TD>
                       <TD>{student.category}</TD>
                       <TD>{student.room ? <Badge>{student.room.name}</Badge> : "—"}</TD>
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
                 <div key={student.id} className="flex items-center justify-between gap-4 rounded-2xl border border-[var(--border)] bg-[var(--muted)]/50 p-4">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-wide text-[var(--primary)]">{categoryLabel} · {ordinalRank(rank)} Place</p>
-                    <p className="font-bold">{student.mobile}</p>
+                    <p className="font-bold">{student.serialNumber}</p>
                     <p className="text-xs text-[var(--muted-foreground)]">{student.room?.name ?? "No room"}</p>
                   </div>
                   <p className="text-xl font-black text-[var(--primary)]">{student.quizMark}/{quizConfig.totalMarks}</p>

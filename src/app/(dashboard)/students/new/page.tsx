@@ -103,11 +103,11 @@ export default async function NewStudentPage({ searchParams }: { searchParams: P
       <Card className="no-print">
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Search className="h-5 w-5 text-[var(--primary)]" /> Find Uploaded Student</CardTitle>
-          <CardDescription>Search by mobile, serial number, or student name. Search is case-insensitive. You can also filter by category.</CardDescription>
+          <CardDescription>Search by serial number, student name, or mobile. Search is case-insensitive. You can also filter by category.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-[1fr_240px_auto]">
-            <Input name="q" defaultValue={q} placeholder="Search mobile, serial number, or name, e.g. FAHim" />
+            <Input name="q" defaultValue={q} placeholder="Search serial number, name, or mobile, e.g. SN-001 or FAHim" />
             <Select name="category" defaultValue={category}>
               <option value="">All categories</option>
               {categories.map((item) => (

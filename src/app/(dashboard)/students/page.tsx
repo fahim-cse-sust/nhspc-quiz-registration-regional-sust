@@ -113,7 +113,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       <Card className="no-print">
         <CardContent>
           <form className="grid gap-3 lg:grid-cols-[1fr_220px_220px_190px_auto]">
-            <Input name="q" defaultValue={q} placeholder="Search mobile, serial number, or name, e.g. FAHim" />
+            <Input name="q" defaultValue={q} placeholder="Search serial number, name, or mobile, e.g. SN-001 or FAHim" />
             <Select name="category" defaultValue={category}>
               <option value="">All categories</option>
               {categories.map((item) => (

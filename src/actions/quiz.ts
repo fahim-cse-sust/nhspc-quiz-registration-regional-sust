@@ -25,12 +25,12 @@ export async function updateQuizTotalMarksAction(_prevState: ActionState, formDa
   const highestMarkedStudent = await prisma.student.findFirst({
     where: { quizMark: { not: null } },
     orderBy: { quizMark: "desc" },
-    select: { quizMark: true, mobile: true }
+    select: { quizMark: true, serialNumber: true }
   });
 
   if (highestMarkedStudent?.quizMark != null && parsed.data.totalMarks < highestMarkedStudent.quizMark) {
     return {
-      error: `Total mark cannot be lower than the current highest mark (${highestMarkedStudent.quizMark}) by ${highestMarkedStudent.mobile}.`
+      error: `Total mark cannot be lower than the current highest mark (${highestMarkedStudent.quizMark}) by Serial Number ${highestMarkedStudent.serialNumber}.`
     };
   }
 

@@ -49,13 +49,13 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
   const [students, rooms, rankedCandidateStudents, markedCount, registeredCount] = await Promise.all([
     prisma.student.findMany({
       where,
-      orderBy: [{ room: { name: "asc" } }, { mobile: "asc" }],
+      orderBy: [{ room: { name: "asc" } }, { serialNumber: "asc" }],
       include: { room: true }
     }),
     prisma.room.findMany({ orderBy: { name: "asc" } }),
     prisma.student.findMany({
       where: { isRegistered: true, quizMark: { not: null } },
-      orderBy: [{ quizMark: "desc" }, { mobile: "asc" }],
+      orderBy: [{ quizMark: "desc" }, { serialNumber: "asc" }],
       include: { room: true }
     }),
     prisma.student.count({ where: { isRegistered: true, quizMark: { not: null } } }),
@@ -126,7 +126,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
                         </TD>
                         <TD><Badge>{categoryLabel}</Badge></TD>
                         <TD>
-                          <p className="font-bold">{student.mobile}</p>
+                          <p className="font-bold">{student.serialNumber}</p>
                           <p className="text-xs text-[var(--muted-foreground)]">{student.nameEn || student.instituteNameEn}</p>
                         </TD>
                         <TD>{student.room ? <Badge>{student.room.name}</Badge> : "—"}</TD>
@@ -172,7 +172,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
           <form className="grid gap-3 md:grid-cols-[1fr_240px_auto]">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]" />
-              <Input className="pl-9" name="q" defaultValue={q} placeholder="Search mobile, serial number, or name, e.g. FAHim" />
+              <Input className="pl-9" name="q" defaultValue={q} placeholder="Search serial number or name, e.g. SN-001 or FAHim" />
             </div>
             <Select name="room" defaultValue={room}>
               <option value="">All rooms</option>
@@ -216,7 +216,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
                 {students.map((student) => (
                   <TR key={student.id}>
                     <TD>
-                      <p className="font-bold">{student.mobile}</p>
+                      <p className="font-bold">{student.serialNumber}</p>
                       <p className="text-xs text-[var(--muted-foreground)]">{student.nameEn || student.instituteNameEn}</p>
                     </TD>
                     <TD>{student.category}</TD>
@@ -235,7 +235,7 @@ export default async function QuizPage({ searchParams }: { searchParams: Promise
                     <TD className="no-print text-right">
                       <QuizMarkForm
                         studentId={student.id}
-                        studentName={student.mobile}
+                        studentName={student.serialNumber}
                         quizMark={student.quizMark}
                         totalMarks={quizConfig.totalMarks}
                       />
